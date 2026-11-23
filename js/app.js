@@ -1,9 +1,9 @@
-import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js';
+import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=4';
 import {
   CATEGORIES, CAT_BY_ID, FLAIRS, CHUNKS, chunkOf, chunkDocId, withAutoFlairs, normFlairs,
   bucketKey, bucketName, matches, shuffle, shuffleUnheard, filtersToHash, hashToFilters, formatDuration,
-} from './model.js';
-import { Player, UNPLAYABLE } from './player.js';
+} from './model.js?v=4';
+import { Player, UNPLAYABLE } from './player.js?v=4';
 
 const [{ initializeApp }, fs, au] = await Promise.all([
   import(`${FIREBASE_SDK}/firebase-app.js`),
