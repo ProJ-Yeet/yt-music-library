@@ -1,9 +1,9 @@
-import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=8';
+import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=9';
 import {
   CATEGORIES, CAT_BY_ID, FLAIRS, CHUNKS, chunkOf, chunkDocId, withAutoFlairs, normFlairs,
   bucketKey, bucketName, matches, shuffle, shuffleUnheard, filtersToHash, hashToFilters, formatDuration,
-} from './model.js?v=8';
-import { Player, UNPLAYABLE } from './player.js?v=8';
+} from './model.js?v=9';
+import { Player, UNPLAYABLE } from './player.js?v=9';
 
 const [{ initializeApp }, fs, au] = await Promise.all([
   import(`${FIREBASE_SDK}/firebase-app.js`),
@@ -187,6 +187,8 @@ async function updateVideo(id, patch) {
   if (review && !v.r && (review.listened[id] || review.ids.includes(id))) {
     apTicks.set(id, true);
     noteListened(id, 'heard');
+    review.listened[id].rated = true; // only songs you rated start ticked
+    saveReview();
     if ($('approveDlg').open) renderApprove();
   }
   const next = { ...v, ...patch };
@@ -795,7 +797,7 @@ function renderNpRate() {
 // Approve dialog
 function renderApprove() {
   const items = pendingApprovals();
-  for (const [id, x] of items) if (!apTicks.has(id)) apTicks.set(id, x.k === 'heard');
+  for (const [id, x] of items) if (!apTicks.has(id)) apTicks.set(id, !!x.rated);
   const note = { unplayable: 'could not play here', heard: '' };
   const shown = $('apHideTicked').checked ? items.filter(([id]) => !apTicks.get(id)) : items;
   $('apList').replaceChildren(...shown.map(([id, x]) => {
