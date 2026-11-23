@@ -12,7 +12,7 @@ export const CATEGORIES = [
   { id: 'rock', name: 'Rock', short: 'Ro', hint: 'Rock' },
   { id: 'epic', name: 'Epic', short: 'Ep', hint: 'Epic' },
   { id: 'minecraft', name: 'Minecraft', short: 'Mc', hint: 'Minecraft' },
-  { id: 'hololive', name: 'Hololive', short: 'H', hint: 'Hololive talents' },
+  { id: 'hololive', name: 'Hololive', short: 'H', hint: 'Hololive and other VTubers' },
 ];
 export const CAT_BY_ID = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 

@@ -51,7 +51,7 @@ everyone gets their own.
 |---|---|---|---|
 | **S** Song (with lyrics) | **M** Music (no words) | **R** Relax (ambient, to work to) | **Sl** Slow |
 | **E** Electric (EDM) | **C** Classical | **P** Pop | **Ro** Rock |
-| **Ep** Epic | **Mc** Minecraft | **H** Hololive | |
+| **Ep** Epic | **Mc** Minecraft | **H** Hololive (any VTuber) | |
 
 Flairs: **Long** (automatic past 15 minutes) and **2nd** (Secondary).
 
