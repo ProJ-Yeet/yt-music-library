@@ -1,109 +1,81 @@
 # Music Library
 
-An always-on, shareable website for a rated YouTube music library. Every song has a
-**category**, a **1–5 star rating** and optional **flairs**. Tick the filters you want and the
-site builds the playlist on the spot, then plays it right in the page, in order, shuffled, or
-with **Shuffle unheard**.
+<p>
+  <a href="https://proj-yeet.github.io/yt-music-library/"><img alt="Open the site" src="https://img.shields.io/badge/open-the%20library-e0457b?style=for-the-badge"></a>
+  <a href="https://github.com/ProJ-Yeet/yt-channel-playlist-collector"><img alt="Companion userscript" src="https://img.shields.io/badge/userscript-collector-e8743b?style=for-the-badge"></a>
+  <a href="https://ko-fi.com/projyeet"><img alt="Support me on Ko-fi" src="https://ko-fi.com/img/githubbutton_sm.svg" height="28"></a>
+</p>
+<p>
+  <a href="https://www.youtube.com/@proj-yeet"><img alt="YouTube" src="https://img.shields.io/badge/youtube-ProJ--Yeet-ff0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
+  <a href="https://discord.gg/htkpNjk5yq"><img alt="Discord" src="https://img.shields.io/badge/discord-join%20us-5865f2?style=for-the-badge&logo=discord&logoColor=white"></a>
+</p>
 
-**Live site:** https://proj-yeet.github.io/yt-music-library/
+My YouTube music collection as a website anyone can open. Every song has a category, a 1–5
+star rating and a couple of flairs. Pick what you're in the mood for and it plays right there.
 
-Companion userscript (rates songs on YouTube and files them into playlists):
-**[YouTube Channel Playlist Collector](https://github.com/ProJ-Yeet/yt-channel-playlist-collector)**
+**https://proj-yeet.github.io/yt-music-library/**
 
-## What it does
+The ratings come from the **[YouTube Channel Playlist Collector](https://github.com/ProJ-Yeet/yt-channel-playlist-collector)**
+userscript. Rate a song on YouTube and it appears here a second later, already sorted into its
+playlist.
 
-- **Library grid**: thumbnails with the category letter on top and the stars underneath.
-  Long and Secondary flairs and the duration are shown on the thumbnail.
-- **Filters**: categories, stars, Long (any / only / hide), Secondary, length range, text
-  search over title and channel, and several sort orders. Each chip shows how many songs it
-  would add.
-- **Share links**: the filters live in the URL, so 🔗 Share copies a link to exactly that
-  playlist for a friend.
-- **Player**: YouTube's embedded player with a queue, next/previous and keyboard shortcuts
-  (Space, ←/→, Ctrl+←/→ to seek 5 s, 0–9 to jump). Videos whose owners block playback
-  outside YouTube are skipped automatically.
-- **Shuffle unheard**: songs you heard within the cool-down period (default 7 days) don't
-  play until everything else has. After that a song's chance grows the longer it has been
-  since you heard it. Each song's cool-down is stretched by a random 0–50%, so a batch you
-  heard together comes back spread over several days instead of all at once. Listening
-  history stays in your own browser.
-- **Open on YouTube**: the first 50 songs as a temporary YouTube playlist.
-- **Real time**: the library is a Firestore database, so a rating changed on the website or
-  on YouTube shows up on every open copy of the site within a second or two.
-- **Editing**: only the owner can edit, after signing in with Google. Everyone else can
-  browse and play.
+### Why support it
 
-### Categories and flairs
+It's free and will stay free, written by one person in spare time. If you've found some good
+music through it, a coffee on [Ko-fi](https://ko-fi.com/projyeet) is appreciated, never
+required. Suggestions are welcome on [Discord](https://discord.gg/htkpNjk5yq).
 
-| Letter | Category | Meaning |
-|---|---|---|
-| S | Song | songs with lyrics |
-| M | Music | instrumental, no words |
-| R | Relax | ambient music to work to |
-| Sl | Slow | songs on the slow side |
-| E | Electric | EDM |
-| C | Classical | |
-| P | Pop | |
-| Ro | Rock | |
-| Ep | Epic | |
-| Mc | Minecraft | |
-| H | Hololive | Hololive talents |
+## Using it
 
-Flairs: **Long** (set automatically for anything over 15 minutes) and **Secondary**.
+- **Filter** by category, stars, Long (over 15 min), Secondary, length or a search. The numbers
+  on the chips tell you how many songs each choice adds.
+- **▶ Play** goes in order, **🔀 Shuffle** is a plain shuffle, and **✨ Shuffle unheard** is
+  explained below.
+- **🔗 Share** copies a link with your filters in it. Your friend opens exactly that playlist.
+- **Open on YouTube** opens the first 50 songs as a temporary YouTube playlist.
+- Keys: Space to pause, ← → for previous/next, Ctrl + ← → to seek 5 s, 0–9 to jump.
 
-Each combination of stars, category and flairs (for example "4★ Song" or "3★ Relax · Long")
-has its own YouTube playlist. The userscript creates the playlist when the first song arrives
-and starts the next one ("… 2") when YouTube's 5,000-video limit is reached.
+Some videos aren't allowed to play outside YouTube. Those are skipped.
 
-## How it fits together
+### Shuffle unheard
 
-```
- YouTube (logged in)                    Firestore (free Spark plan)           This website
- ┌──────────────────────────┐  writes   ┌──────────────────────────┐  live   ┌───────────────┐
- │ Collector userscript     │ ────────▶ │ library/meta             │ ──────▶ │ grid, filters │
- │  rating strip, filing,   │  via the  │ library/c00 … c31        │         │ player        │
- │  moves, import           │  Library  │ (songs grouped in 32     │ ◀────── │ owner edits   │
- │                          │  Bridge   │  documents)              │  edits  │               │
- └──────────────────────────┘ ◀──────── └──────────────────────────┘         └───────────────┘
-            moves songs rated on the site into their playlist
-```
+Songs you heard in the last 7 days (change it in ⚙) wait until everything else has played.
+After that, the longer it's been since you heard a song, the more likely it is to come up.
+Each song's wait is also stretched by a random 0–50%, so a batch you heard together on Monday
+doesn't come back together the next Monday. What you've heard is kept in your own browser, so
+everyone gets their own.
 
-Songs are grouped into 32 documents, so a visit costs about 33 reads, well within the free
-50,000 per day.
+## Categories
 
-Song record (`library/cNN`, field `v.<videoId>`):
+| | | | |
+|---|---|---|---|
+| **S** Song (with lyrics) | **M** Music (no words) | **R** Relax (ambient, to work to) | **Sl** Slow |
+| **E** Electric (EDM) | **C** Classical | **P** Pop | **Ro** Rock |
+| **Ep** Epic | **Mc** Minecraft | **H** Hololive | |
 
-| Field | Meaning |
-|---|---|
-| `t`, `a`, `d` | title, channel, duration in seconds |
-| `c`, `s`, `f` | category, stars, flairs (`L` Long, `S` Secondary) |
-| `p` | the YouTube playlist the song currently sits in |
-| `x`, `u` | added / last changed (ms) |
+Flairs: **Long** (automatic past 15 minutes) and **2nd** (Secondary).
 
-`library/meta` holds `ownerUid` and `buckets`, the list of YouTube playlists for each
-combination, with their sizes.
+## How it works
 
-## Running your own copy
+A static page (plain JS, no build) on GitHub Pages, reading a Firestore database in real time.
+Anyone can read it. Only my Google account can change it, which is enforced by
+[`firestore.rules`](firestore.rules).
 
-1. Create a Firebase project. Add a **Firestore** database, turn on **Google** sign-in, and
-   add your GitHub Pages domain under Authentication → Settings → Authorized domains.
-2. Put your web config in `js/firebase-config.js`.
-3. Publish `firestore.rules` with your Google account's email in it.
-4. Serve the folder from anywhere static. GitHub Pages works.
-5. Sign in once. The first sign-in by the account the rules allow becomes the owner.
+The library is split over 32 documents, so a visit costs about 33 reads, and Firebase's free
+tier allows 50,000 a day. A song record is short: title, channel, duration, category, stars,
+flairs, and which YouTube playlist it sits in.
 
-There is no build step: plain ES modules, with the Firebase SDK loaded from Google's CDN.
-Tests for the filtering and shuffle logic: `npm test` (Node 20+).
+Want your own? Make a Firebase project (Firestore + Google sign-in, with your Pages domain
+authorised). Put its config in `js/firebase-config.js` and your email in `firestore.rules`,
+then host the folder anywhere. Tests: `npm test`.
 
 ## Credits
 
-- Inspired by [playlistShuffle](https://github.com/imagevars/playlistShuffle) by imagevars:
-  the idea of shuffling YouTube playlists in a web player, and its keyboard shortcuts. No code
-  was copied.
-- Playback uses the [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference).
-- Data and sign-in use [Firebase](https://firebase.google.com/).
+- The idea of a better shuffle for YouTube playlists in a web player, and the keyboard
+  shortcuts, come from [playlistShuffle](https://github.com/imagevars/playlistShuffle) by
+  imagevars. No code was copied.
+- [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference) and
+  [Firebase](https://firebase.google.com/).
 - Built with help from Claude (Anthropic).
 
-## License
-
-[MIT](LICENSE)
+Licensed under [MIT](LICENSE).
