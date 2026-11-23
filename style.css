@@ -183,6 +183,10 @@ main { min-width: 0; }
 .meta { padding: 4px 10px 10px; min-width: 0; }
 .title { font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .chan { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.dead .thumb { display: block; }
+.card.dead .thumb img { filter: grayscale(1) brightness(.6); }
+.deadinfo { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.deadinfo a { color: var(--accent); }
 .empty { padding: 40px 10px; text-align: center; color: var(--muted); grid-column: 1 / -1; }
 .sentinel { height: 40px; }
 

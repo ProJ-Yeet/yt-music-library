@@ -220,7 +220,13 @@ function buildFilterPanel() {
   $('minMin').value = filters.minMin ?? '';
   $('maxMin').value = filters.maxMin ?? '';
   $('sort').value = sortMode;
+  $('deadBtn').setAttribute('aria-pressed', String(filters.dead === 'only'));
 }
+$('deadBtn').addEventListener('click', () => {
+  filters.dead = filters.dead === 'only' ? 'hide' : 'only';
+  $('deadBtn').setAttribute('aria-pressed', String(filters.dead === 'only'));
+  changed();
+});
 function seg(el, key) {
   const opts = [['any', 'Any'], ['only', 'Only'], ['no', 'Hide']];
   el.replaceChildren(...opts.map(([val, label]) => h('button', {
@@ -251,6 +257,7 @@ $('resetBtn').addEventListener('click', () => {
   filters.cats.clear(); filters.stars.clear();
   filters.long = 'any'; filters.secondary = 'any';
   filters.minMin = null; filters.maxMin = null; filters.q = '';
+  filters.dead = 'hide';
   buildFilterPanel();
   changed();
 });
@@ -272,6 +279,7 @@ function updateCounts() {
   }
   for (const b of $('catChips').children) b.querySelector('.n').textContent = (cat[b.dataset.cat] || 0).toLocaleString();
   for (const b of $('starChips').children) b.querySelector('.n').textContent = (star[b.dataset.star] || 0).toLocaleString();
+  $('deadN').textContent = lib.reduce((n, v) => n + (v.z ? 1 : 0), 0).toLocaleString();
 }
 
 // ---------------------------------------------------------------------------
@@ -291,7 +299,10 @@ let rendered = 0;
 const PAGE = 120;
 
 function computeList() {
-  return lib.filter((v) => matches(v, filters)).sort(SORTS[sortMode] || SORTS.added);
+  const sort = filters.dead === 'only'
+    ? (a, b) => (b.z.at || 0) - (a.z.at || 0) // newest death first
+    : SORTS[sortMode] || SORTS.added;
+  return lib.filter((v) => matches(v, filters)).sort(sort);
 }
 
 function render({ keep = false } = {}) {
@@ -299,10 +310,13 @@ function render({ keep = false } = {}) {
   const count = keep ? Math.max(rendered, PAGE) : PAGE;
   rendered = 0;
   $('grid').replaceChildren();
+  const deadView = filters.dead === 'only';
+  for (const id of ['playBtn', 'shuffleBtn', 'unheardBtn', 'ytBtn']) $(id).hidden = deadView;
+  $('copyDeadBtn').hidden = !deadView;
   if (!list.length) {
-    $('grid').append(h('div', { class: 'empty' }, lib.length
-      ? 'Nothing matches these filters.'
-      : 'The library is empty for now.'));
+    $('grid').append(h('div', { class: 'empty' }, deadView
+      ? 'No dead videos on record.'
+      : lib.length ? 'Nothing matches these filters.' : 'The library is empty for now.'));
   }
   renderMore(count);
   updateSummary();
@@ -347,7 +361,31 @@ function starsEl(v) {
   return wrap;
 }
 
+// Dead songs: where they were, and a search for another upload.
+function playlistName(pid, fallback = '') {
+  for (const chain of Object.values(meta.buckets || {})) for (const p of chain || []) if (p.id === pid) return p.name;
+  return fallback || pid || '';
+}
+const searchUrl = (v) => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${v.t || ''} ${v.a || ''}`.trim())}`;
+const dayStr = (ms) => (ms ? new Date(ms).toISOString().slice(0, 10) : '');
+function deadInfo(v) {
+  const z = v.z || {};
+  return h('div', { class: 'deadinfo' },
+    h('div', {}, `🪦 ${dayStr(z.at)} · ${z.why || 'unavailable'}`),
+    h('div', {}, `was in ${playlistName(z.pl, z.pn) || '?'} · `,
+      h('a', { href: searchUrl(v), target: '_blank', rel: 'noopener' }, 'find another upload ↗'), ' · ',
+      h('a', { href: ytUrl(v.id), target: '_blank', rel: 'noopener' }, 'old link')));
+}
+$('copyDeadBtn').addEventListener('click', async () => {
+  const text = list.map((v) => [dayStr(v.z.at), v.z.why || 'unavailable', playlistName(v.z.pl, v.z.pn),
+    v.t || '', v.a || '', ytUrl(v.id)].join(' | ')).join('\n');
+  const head = `Dead videos in the Music Library (${list.length}) — date | reason | playlist | title | channel | old link\n`;
+  try { await navigator.clipboard.writeText(head + text); toast(`Copied ${list.length} dead videos.`); }
+  catch { prompt('Copy the report:', head + text); }
+});
+
 function card(v) {
+  if (v.z) return deadCard(v);
   const cat = CAT_BY_ID[v.c];
   const f = v.f || '';
   const catEl = isOwner
@@ -369,6 +407,24 @@ function card(v) {
     h('div', { class: 'meta' },
       h('div', { class: 'title', title: v.t }, v.t || v.id),
       h('div', { class: 'chan' }, v.a || ''),
+    ),
+  );
+}
+
+function deadCard(v) {
+  const cat = CAT_BY_ID[v.c];
+  return h('article', { class: 'card dead', dataset: { id: v.id } },
+    h('a', { class: 'thumb', href: searchUrl(v), target: '_blank', rel: 'noopener', title: 'Search YouTube for another upload' },
+      h('img', { src: thumb(v.id), alt: '', loading: 'lazy', decoding: 'async' }),
+      h('span', { class: 'cat', 'data-c': v.c, title: cat ? cat.name : v.c }, cat ? cat.short : '?'),
+      h('span', { class: 'dur' }, formatDuration(v.d)),
+    ),
+    h('div', { class: 'stars', 'aria-label': `${v.s} stars` },
+      [1, 2, 3, 4, 5].map((n) => h('span', { class: n <= v.s ? '' : 'off' }, '★'))),
+    h('div', { class: 'meta' },
+      h('div', { class: 'title', title: v.t }, v.t || v.id),
+      h('div', { class: 'chan' }, v.a || ''),
+      deadInfo(v),
     ),
   );
 }

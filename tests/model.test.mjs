@@ -16,6 +16,18 @@ test('bucket keys combine stars, category and sorted flairs', () => {
   assert.equal(bucketName('5-hololive'), '5★ Hololive');
 });
 
+test('dead songs only show in the dead view, which survives a shared link', () => {
+  const alive = { c: 'song', s: 4, f: '', d: 200, t: 'a' };
+  const dead = { ...alive, z: { at: 1, why: 'deleted' } };
+  const { filters } = hashToFilters('');
+  assert.equal(matches(alive, filters), true);
+  assert.equal(matches(dead, filters), false);
+  const deadView = hashToFilters('#' + filtersToHash({ ...filters, dead: 'only' })).filters;
+  assert.equal(deadView.dead, 'only');
+  assert.equal(matches(dead, deadView), true);
+  assert.equal(matches(alive, deadView), false);
+});
+
 test('long flair is added past 15 minutes and never removed', () => {
   assert.equal(withAutoFlairs('', 900), '');
   assert.equal(withAutoFlairs('', 901), 'L');

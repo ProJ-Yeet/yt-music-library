@@ -39,6 +39,10 @@ required. Suggestions are welcome on [Discord](https://discord.gg/htkpNjk5yq).
 
 Some videos aren't allowed to play outside YouTube. Those are skipped.
 
+**🪦 Dead videos** lists songs that died on YouTube (deleted, private, blocked). They're out of
+their playlist but kept here with the date, the reason and where they were, plus a link to search
+for another upload. **📋 Copy report** gives the list as text.
+
 ### Shuffle unheard
 
 Songs you heard in the last 7 days (change it in ⚙) wait until everything else has played.

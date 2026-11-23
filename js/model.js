@@ -69,6 +69,8 @@ export function bucketName(key) {
 // filters: { cats:Set, stars:Set, long:'any'|'only'|'no', secondary:'any'|'only'|'no',
 //            minMin:number|null, maxMin:number|null, q:string }
 export function matches(v, flt) {
+  // Dead songs (v.z) are kept on record but only shown in the Dead videos view.
+  if (flt.dead === 'only' ? !v.z : v.z) return false;
   if (flt.cats && flt.cats.size && !flt.cats.has(v.c)) return false;
   if (flt.stars && flt.stars.size && !flt.stars.has(v.s)) return false;
   const f = v.f || '';
@@ -156,6 +158,7 @@ export function filtersToHash(flt, extra = {}) {
   if (flt.minMin != null) p.set('min', String(flt.minMin));
   if (flt.maxMin != null) p.set('max', String(flt.maxMin));
   if (flt.q) p.set('q', flt.q);
+  if (flt.dead === 'only') p.set('dead', 'only');
   for (const [k, v] of Object.entries(extra)) if (v != null && v !== '') p.set(k, String(v));
   return p.toString();
 }
@@ -172,6 +175,7 @@ export function hashToFilters(hash) {
       minMin: num('min'),
       maxMin: num('max'),
       q: p.get('q') || '',
+      dead: p.get('dead') === 'only' ? 'only' : 'hide',
     },
     params: p,
   };

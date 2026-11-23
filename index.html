@@ -58,6 +58,11 @@
       </section>
 
       <section>
+        <h3>Dead videos</h3>
+        <button id="deadBtn" class="chip" type="button" aria-pressed="false" title="Songs that died on YouTube (deleted, private, blocked). They were taken out of their playlist, but the record is kept so they can be replaced.">🪦 Show dead videos <span id="deadN" class="n">0</span></button>
+      </section>
+
+      <section>
         <h3>Sort</h3>
         <select id="sort">
           <option value="added">Newest added</option>
@@ -82,6 +87,7 @@
           <button id="unheardBtn" class="btn" title="Skips songs you heard recently; the rest are shuffled, favouring ones you have not heard for longest">✨ Shuffle unheard</button>
           <button id="ytBtn" class="btn ghost" title="Opens the first 50 as a temporary playlist on YouTube">Open on YouTube</button>
           <button id="shareBtn" class="btn ghost" title="Copy a link to exactly these filters">🔗 Share</button>
+          <button id="copyDeadBtn" class="btn ghost" hidden title="Copy the list as text: date, reason, playlist, title, channel, link">📋 Copy report</button>
         </div>
       </div>
       <div id="notice" class="notice" hidden></div>
