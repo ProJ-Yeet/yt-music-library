@@ -361,6 +361,21 @@ function starsEl(v) {
   return wrap;
 }
 
+// A video that looks dead to whoever is browsing (blank thumbnail, or the
+// player refuses it) is reported once. Anyone may file a report; the owner's
+// userscript checks each one from the owner's country before acting on it.
+const reported = new Set();
+function reportDead(id, why) {
+  const v = byId.get(id);
+  if (!v || v.z || reported.has(id)) return;
+  reported.add(id);
+  // Fails quietly when this video is already reported (the rules allow a
+  // report to be created, never changed).
+  fs.setDoc(fs.doc(db, 'reports', id), { why, at: fs.serverTimestamp() }).catch(() => {});
+}
+// YouTube answers a missing video's thumbnail with a 120×90 placeholder.
+const checkThumb = (id) => (e) => { if (e.currentTarget.naturalWidth === 120) reportDead(id, 'thumb'); };
+
 // Dead songs: where they were, and a search for another upload.
 function playlistName(pid, fallback = '') {
   for (const chain of Object.values(meta.buckets || {})) for (const p of chain || []) if (p.id === pid) return p.name;
@@ -396,7 +411,7 @@ function card(v) {
   const playing = queue && queue.ids[queue.i] === v.id;
   return h('article', { class: 'card' + (playing ? ' playing' : ''), dataset: { id: v.id } },
     h('div', { class: 'thumb', onclick: () => playFromList(v.id), title: 'Play from here' },
-      h('img', { src: thumb(v.id), alt: '', loading: 'lazy', decoding: 'async' }),
+      h('img', { src: thumb(v.id), alt: '', loading: 'lazy', decoding: 'async', onload: checkThumb(v.id) }),
       catEl,
       pending ? h('span', { class: 'pending', title: `Moves to "${bucketName(bucketKey(v))}" next time YouTube is open with the userscript` }, '⟳') : null,
       h('span', { class: 'flairs' }, FLAIRS.filter((x) => f.includes(x.id)).map((x) => h('span', { class: 'flair', title: x.name }, x.id === 'L' ? 'Long' : '2nd'))),
@@ -491,6 +506,7 @@ const player = new Player($('ytmount'), {
     const id = queue && queue.ids[queue.i];
     if (UNPLAYABLE.has(code) && id) {
       unplayable.add(id);
+      reportDead(id, `e${code}`);
       toast('This one can’t play outside YouTube, skipping. (Open it on YouTube from its card menu.)');
       setTimeout(next, 1200);
     }

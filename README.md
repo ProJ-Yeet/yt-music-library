@@ -41,7 +41,10 @@ Some videos aren't allowed to play outside YouTube. Those are skipped.
 
 **🪦 Dead videos** lists songs that died on YouTube (deleted, private, blocked). They're out of
 their playlist but kept here with the date, the reason and where they were, plus a link to search
-for another upload. **📋 Copy report** gives the list as text.
+for another upload. **📋 Copy report** gives the list as text. When your browser finds a video that looks dead (a blank thumbnail, or the
+player refuses it), the site quietly reports it; the owner's userscript checks each report before
+anything is removed. Reports can be filed by anyone but only read by the owner (see
+[`firestore.rules`](firestore.rules)).
 
 ### Shuffle unheard
 
