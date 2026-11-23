@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Music Library</title>
+  <meta name="description" content="A rated YouTube music library: filter by category, stars and flairs, then play or shuffle it right here.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e0457b'/%3E%3Cpath d='M26 14v26.5a8 8 0 1 0 5 7.4V24l17-4v15.5a8 8 0 1 0 5 7.4V8z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <button id="filtersToggle" class="icon-btn only-narrow" aria-label="Show filters">☰</button>
+    <div class="brand">
+      <span class="logo" aria-hidden="true">♫</span>
+      <span>Music Library</span>
+      <span id="liveDot" class="live" title="Connecting…"></span>
+    </div>
+    <div class="top-actions">
+      <span id="ownerBadge" class="owner-badge" hidden>Editing</span>
+      <button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙</button>
+      <button id="signInBtn" class="btn ghost">Sign in</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside id="filters" class="filters">
+      <input id="q" type="search" placeholder="Search title or channel" autocomplete="off">
+
+      <section>
+        <h3>Category</h3>
+        <div id="catChips" class="chips"></div>
+      </section>
+
+      <section>
+        <h3>Stars</h3>
+        <div id="starChips" class="chips"></div>
+      </section>
+
+      <section>
+        <h3>Long <small>(over 15 min)</small></h3>
+        <div id="longSeg" class="seg" role="radiogroup" aria-label="Long"></div>
+      </section>
+
+      <section>
+        <h3>Secondary</h3>
+        <div id="secSeg" class="seg" role="radiogroup" aria-label="Secondary"></div>
+      </section>
+
+      <section>
+        <h3>Length <small>(minutes)</small></h3>
+        <div class="range">
+          <input id="minMin" type="number" min="0" step="1" placeholder="min" inputmode="numeric">
+          <span>to</span>
+          <input id="maxMin" type="number" min="0" step="1" placeholder="max" inputmode="numeric">
+        </div>
+      </section>
+
+      <section>
+        <h3>Sort</h3>
+        <select id="sort">
+          <option value="added">Newest added</option>
+          <option value="stars">Most stars</option>
+          <option value="random">Random</option>
+          <option value="title">Title A–Z</option>
+          <option value="channel">Channel A–Z</option>
+          <option value="long">Longest</option>
+          <option value="short">Shortest</option>
+        </select>
+      </section>
+
+      <button id="resetBtn" class="btn ghost wide">Reset filters</button>
+    </aside>
+
+    <main>
+      <div class="actionbar">
+        <div id="summary" class="summary">Loading library…</div>
+        <div class="actions">
+          <button id="playBtn" class="btn primary">▶ Play</button>
+          <button id="shuffleBtn" class="btn">🔀 Shuffle</button>
+          <button id="unheardBtn" class="btn" title="Skips songs you heard recently; the rest are shuffled, favouring ones you have not heard for longest">✨ Shuffle unheard</button>
+          <button id="ytBtn" class="btn ghost" title="Opens the first 50 as a temporary playlist on YouTube">Open on YouTube</button>
+          <button id="shareBtn" class="btn ghost" title="Copy a link to exactly these filters">🔗 Share</button>
+        </div>
+      </div>
+      <div id="notice" class="notice" hidden></div>
+      <div id="grid" class="grid" aria-live="polite"></div>
+      <div id="sentinel" class="sentinel"></div>
+    </main>
+  </div>
+
+  <section id="dock" class="dock" hidden aria-label="Player">
+    <div class="dock-video"><div id="ytmount"></div></div>
+    <div class="dock-body">
+      <div class="np">
+        <div id="npTitle" class="np-title"></div>
+        <div id="npMeta" class="np-meta"></div>
+      </div>
+      <div class="dock-controls">
+        <button id="prevBtn" class="icon-btn" aria-label="Previous">⏮</button>
+        <button id="ppBtn" class="icon-btn" aria-label="Play or pause">⏯</button>
+        <button id="nextBtn" class="icon-btn" aria-label="Next">⏭</button>
+        <span id="modeLabel" class="mode-label"></span>
+        <button id="queueBtn" class="btn ghost small">Queue</button>
+        <button id="closeDock" class="icon-btn" aria-label="Close player">✕</button>
+      </div>
+      <ol id="queueList" class="queue" hidden></ol>
+    </div>
+  </section>
+
+  <dialog id="settingsDlg">
+    <form method="dialog">
+      <h2>Settings</h2>
+      <label class="field">
+        <span>Shuffle unheard: skip songs heard in the last</span>
+        <span><input id="cooldown" type="number" min="0" max="365" step="1"> days</span>
+      </label>
+      <p class="muted">Each song's wait is stretched by up to 50% at random, so a batch you heard together comes back spread over several days. Listening history is kept in this browser only.</p>
+      <p id="heardStats" class="muted"></p>
+      <div class="dlg-row">
+        <button id="clearHeard" type="button" class="btn ghost">Forget my listening history</button>
+      </div>
+      <h3>About</h3>
+      <p class="muted">Ratings are kept up to date by the companion userscript, <a href="https://github.com/ProJ-Yeet/yt-channel-playlist-collector" target="_blank" rel="noopener">YouTube Channel Playlist Collector</a>. Player idea inspired by <a href="https://github.com/imagevars/playlistShuffle" target="_blank" rel="noopener">playlistShuffle</a>. <a href="https://github.com/ProJ-Yeet/yt-music-library" target="_blank" rel="noopener">Source on GitHub</a>.</p>
+      <div class="dlg-row end"><button class="btn primary">Done</button></div>
+    </form>
+  </dialog>
+
+  <div id="menu" class="menu" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <noscript>This site needs JavaScript.</noscript>
+</body>
+</html>

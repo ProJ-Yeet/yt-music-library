@@ -1,0 +1,10 @@
+{
+  "name": "yt-music-library",
+  "private": true,
+  "type": "module",
+  "description": "A shareable, always-on website for a rated YouTube music library with filters and a smart shuffle.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/model.test.mjs"
+  }
+}
