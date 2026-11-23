@@ -1,9 +1,9 @@
-import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=6';
+import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=7';
 import {
   CATEGORIES, CAT_BY_ID, FLAIRS, CHUNKS, chunkOf, chunkDocId, withAutoFlairs, normFlairs,
   bucketKey, bucketName, matches, shuffle, shuffleUnheard, filtersToHash, hashToFilters, formatDuration,
-} from './model.js?v=6';
-import { Player, UNPLAYABLE } from './player.js?v=6';
+} from './model.js?v=7';
+import { Player, UNPLAYABLE } from './player.js?v=7';
 
 const [{ initializeApp }, fs, au] = await Promise.all([
   import(`${FIREBASE_SDK}/firebase-app.js`),
@@ -183,6 +183,12 @@ $('signInBtn').addEventListener('click', async () => {
 async function updateVideo(id, patch) {
   const v = byId.get(id);
   if (!v || !isOwner) return;
+  // Setting a rating during a review run (even to the same value) counts as judged: tick it.
+  if (review && !v.r && (review.listened[id] || review.ids.includes(id))) {
+    apTicks.set(id, true);
+    noteListened(id, 'heard');
+    if ($('approveDlg').open) renderApprove();
+  }
   const next = { ...v, ...patch };
   next.f = withAutoFlairs(normFlairs(next.f), next.d);
   const args = [];
@@ -627,9 +633,16 @@ function startQueue(ids, mode, i = 0) {
 }
 function saveQueue() { lsSet(LS.queue, queue); }
 
+let reviewPlaying = null; // the review song on now, to requeue if left before it counts as heard
 function playCurrent() {
   const id = queue && queue.ids[queue.i];
   if (!id) return;
+  if (queue.mode === 'review' && review && reviewPlaying && reviewPlaying !== id &&
+      !review.listened[reviewPlaying] && !reviewDone(reviewPlaying) &&
+      queue.ids.lastIndexOf(reviewPlaying) <= queue.i) {
+    requeueReview([reviewPlaying]); // skipped: it comes round again later in the run
+  }
+  reviewPlaying = queue.mode === 'review' ? id : null;
   $('dock').hidden = false;
   document.body.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
   heardLogged = false;
@@ -644,10 +657,7 @@ function playCurrent() {
   $('npMeta').textContent = v ? `${v.a || ''} · ${cat ? cat.name : ''} · ${'★'.repeat(v.s || 0)} · ${formatDuration(v.d)}` : '';
   $('modeLabel').textContent = `${MODE_LABEL[queue.mode] || ''} · ${queue.i + 1} / ${queue.ids.length}`;
   document.title = `${v ? v.t : id} · Music Library`;
-  if (queue.mode === 'review' && review) {
-    review.i = queue.i;
-    noteListened(id, 'skipped'); // upgraded to "heard" once enough of it has played
-  }
+  if (queue.mode === 'review' && review) review.i = queue.i; // noted as "heard" once enough of it has played
   renderNpRate();
   for (const el of document.querySelectorAll('.card.playing')) el.classList.remove('playing');
   for (const el of document.querySelectorAll(`.card[data-id="${CSS.escape(id)}"]`)) el.classList.add('playing');
@@ -708,6 +718,18 @@ $('shareBtn').addEventListener('click', async () => {
 // ---------------------------------------------------------------------------
 let review = lsGet(LS.review, null); // { ids, i, listened: { id: { k, t } } }
 const saveReview = () => lsSet(LS.review, review);
+const apTicks = new Map(); // id → ticked in the Approve dialog
+// Put songs back at the end of the run, to hear them again later.
+function requeueReview(ids) {
+  for (const id of ids) { delete review.listened[id]; apTicks.delete(id); review.ids.push(id); }
+  if (queue && queue.mode === 'review') { queue.ids = review.ids.slice(); saveQueue(); }
+  saveReview();
+}
+// Older versions saved skipped songs as "skipped"; send those back into the run.
+if (review) {
+  const skipped = Object.keys(review.listened).filter((id) => review.listened[id].k === 'skipped');
+  if (skipped.length) requeueReview(skipped);
+}
 const reviewDone = (id) => { const v = byId.get(id); return !v || !!v.r || !!v.z; };
 function reviewLeft() {
   if (!review) return 0;
@@ -727,7 +749,7 @@ function noteListened(id, k) {
 function pendingApprovals() {
   if (!review) return [];
   return Object.entries(review.listened)
-    .filter(([id]) => byId.has(id) && !reviewDone(id))
+    .filter(([id, x]) => x.k !== 'skipped' && byId.has(id) && !reviewDone(id))
     .sort((a, b) => b[1].t - a[1].t);
 }
 function updateReviewUi() {
@@ -771,16 +793,16 @@ function renderNpRate() {
 }
 
 // Approve dialog
-const apTicks = new Map(); // id → ticked
 function renderApprove() {
   const items = pendingApprovals();
   for (const [id, x] of items) if (!apTicks.has(id)) apTicks.set(id, x.k === 'heard');
-  const note = { skipped: 'skipped', unplayable: 'could not play here', heard: '' };
-  $('apList').replaceChildren(...items.map(([id, x]) => {
+  const note = { unplayable: 'could not play here', heard: '' };
+  const shown = $('apHideTicked').checked ? items.filter(([id]) => !apTicks.get(id)) : items;
+  $('apList').replaceChildren(...shown.map(([id, x]) => {
     const v = byId.get(id);
     const cat = CAT_BY_ID[v.c];
     const box = h('input', { type: 'checkbox', checked: apTicks.get(id) || null,
-      onchange: (e) => { apTicks.set(id, e.currentTarget.checked); countApprove(); } });
+      onchange: (e) => { apTicks.set(id, e.currentTarget.checked); if ($('apHideTicked').checked) renderApprove(); else countApprove(); } });
     return h('li', {},
       box,
       h('img', { src: thumb(id), alt: '', loading: 'lazy' }),
@@ -801,14 +823,13 @@ function countApprove() {
   $('apGo').disabled = !n;
 }
 $('approveBtn').addEventListener('click', () => { renderApprove(); $('approveDlg').showModal(); });
+$('apHideTicked').addEventListener('change', renderApprove);
 $('apAll').addEventListener('click', () => { for (const [id] of pendingApprovals()) apTicks.set(id, true); renderApprove(); });
 $('apNone').addEventListener('click', () => { for (const [id] of pendingApprovals()) apTicks.set(id, false); renderApprove(); });
 $('apBack').addEventListener('click', () => {
   const back = pendingApprovals().filter(([id]) => !apTicks.get(id)).map(([id]) => id);
   if (!back.length) { toast('Nothing unticked.'); return; }
-  for (const id of back) { delete review.listened[id]; apTicks.delete(id); review.ids.push(id); }
-  if (queue && queue.mode === 'review') { queue.ids = review.ids.slice(); saveQueue(); }
-  saveReview();
+  requeueReview(back);
   renderApprove();
   updateReviewUi();
   toast(`${back.length} song${back.length === 1 ? '' : 's'} will come round again later in the run.`);
