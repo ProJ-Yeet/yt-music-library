@@ -92,4 +92,7 @@ export class Player {
   isPlaying() {
     return !!(this.yt && this.yt.getPlayerState && this.yt.getPlayerState() === 1);
   }
+
+  pause() { if (this.yt && this.yt.pauseVideo) this.yt.pauseVideo(); }
+  resume() { if (this.yt && this.yt.playVideo) this.yt.playVideo(); }
 }

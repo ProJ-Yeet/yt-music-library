@@ -39,6 +39,12 @@ required. Suggestions are welcome on [Discord](https://discord.gg/htkpNjk5yq).
 
 Some videos aren't allowed to play outside YouTube. Those are skipped.
 
+**On a phone** the music keeps going when you switch apps or turn the screen off, with play,
+pause and next on the lock screen. Phones normally pause a page's video in the background, so the
+site keeps itself awake with a silent audio track and restarts the song if the phone pauses it. If
+your browser still stops it (iOS Safari does), use Brave and turn on background play in its media
+settings.
+
 **🎧 Review run** (owner only) is for going over the ratings by ear. It shuffles the songs shown
 once and plays each one once, skipping ones already approved. The player shows the song's letter
 and stars so you can fix them as it plays, and **✅ Approve** ticks off everything you heard in one

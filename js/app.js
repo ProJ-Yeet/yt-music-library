@@ -524,7 +524,79 @@ const player = new Player($('ytmount'), {
       setTimeout(next, 1200);
     }
   },
+  onState: (s) => onPlayerState(s),
 });
+
+// ---------------------------------------------------------------------------
+// Playing on with the screen off / in another app (phones)
+//
+// Phones pause a page's video when it goes to the background. Two things
+// push back: a silent audio loop on this page (it keeps the page counted as
+// "playing audio", so it is not frozen, and it puts play/pause/next on the
+// lock screen), and a keep-alive that restarts the song when it was paused
+// while hidden and not by you. Some browsers still stop it (iOS Safari);
+// Brave's "background play" setting covers those cases.
+// ---------------------------------------------------------------------------
+let userPaused = false;
+let revivals = [];
+let silent = null;
+function silentAudio() {
+  if (silent) return silent;
+  // 1 s of 8 kHz 8-bit mono silence as a WAV.
+  const n = 8000;
+  const buf = new Uint8Array(44 + n);
+  const dv = new DataView(buf.buffer);
+  const str = (o, s) => [...s].forEach((c, i) => buf[o + i] = c.charCodeAt(0));
+  str(0, 'RIFF'); dv.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+  str(36, 'data'); dv.setUint32(40, n, true); buf.fill(128, 44);
+  silent = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
+  silent.loop = true;
+  return silent;
+}
+function keepAwake(on) {
+  const a = silentAudio();
+  if (on) a.play().catch(() => {}); else a.pause();
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
+}
+function onPlayerState(s) {
+  if (s === 1) { userPaused = false; keepAwake(true); return; }
+  if (s !== 2) return;
+  if (!document.hidden) { userPaused = true; keepAwake(false); return; } // paused on the page: that was you
+  if (userPaused) return;
+  // Paused by the phone while in the background: play on (a few times a minute at most).
+  const now = Date.now();
+  revivals = revivals.filter((t) => now - t < 60000);
+  if (revivals.length >= 6) return;
+  revivals.push(now);
+  setTimeout(() => { if (!userPaused) player.resume(); }, 400);
+}
+function togglePlay() {
+  if (player.isPlaying()) { userPaused = true; player.pause(); keepAwake(false); }
+  else { userPaused = false; player.resume(); keepAwake(true); }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && queue && !$('dock').hidden && !userPaused) {
+    setTimeout(() => { if (!userPaused && !player.isPlaying()) player.resume(); }, 800);
+  }
+});
+if ('mediaSession' in navigator) {
+  const on = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch { /* unsupported */ } };
+  on('play', () => { userPaused = false; player.resume(); keepAwake(true); });
+  on('pause', () => { userPaused = true; player.pause(); keepAwake(false); });
+  on('nexttrack', () => next());
+  on('previoustrack', () => prev());
+}
+function setNowPlayingMeta(v) {
+  if (!('mediaSession' in navigator) || !v) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: v.t || v.id, artist: v.a || '', album: 'Music Library',
+      artwork: [{ src: `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }],
+    });
+  } catch { /* older browser */ }
+}
 
 function markHeard() {
   const id = queue && queue.ids[queue.i];
@@ -552,9 +624,12 @@ function playCurrent() {
   $('dock').hidden = false;
   document.body.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
   heardLogged = false;
+  userPaused = false;
   player.play(id);
+  keepAwake(true);
   const v = byId.get(id);
   $('npTitle').textContent = v ? v.t : id;
+  setNowPlayingMeta(v || { id });
   const cat = v && CAT_BY_ID[v.c];
   $('npMeta').textContent = v ? `${v.a || ''} · ${cat ? cat.name : ''} · ${'★'.repeat(v.s || 0)} · ${formatDuration(v.d)}` : '';
   $('modeLabel').textContent = `${MODE_LABEL[queue.mode] || ''} · ${queue.i + 1} / ${queue.ids.length}`;
@@ -759,7 +834,7 @@ $('apGo').addEventListener('click', async () => {
 
 $('prevBtn').addEventListener('click', prev);
 $('nextBtn').addEventListener('click', () => next());
-$('ppBtn').addEventListener('click', () => player.toggle());
+$('ppBtn').addEventListener('click', togglePlay);
 $('queueBtn').addEventListener('click', () => {
   $('queueList').hidden = !$('queueList').hidden;
   refreshQueueList();
@@ -769,6 +844,8 @@ $('closeDock').addEventListener('click', () => {
   $('dock').hidden = true;
   document.body.style.setProperty('--dock-h', '0px');
   player.stop();
+  userPaused = true;
+  keepAwake(false);
   for (const el of document.querySelectorAll('.card.playing')) el.classList.remove('playing');
 });
 
@@ -777,7 +854,7 @@ document.addEventListener('keydown', (e) => {
   if ($('dock').hidden) return;
   const tag = (document.activeElement && document.activeElement.tagName) || '';
   if (['INPUT', 'SELECT', 'TEXTAREA'].includes(tag) || e.altKey || e.metaKey) return;
-  if (e.code === 'Space') { e.preventDefault(); player.toggle(); }
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
   else if (e.code === 'ArrowRight') { e.preventDefault(); if (e.ctrlKey) player.seekBy(5); else next(); }
   else if (e.code === 'ArrowLeft') { e.preventDefault(); if (e.ctrlKey) player.seekBy(-5); else prev(); }
   else if (/^Digit\d$/.test(e.code) && !e.ctrlKey) player.seekFraction(Number(e.code.slice(5)) / 10);
