@@ -16,6 +16,17 @@ test('bucket keys combine stars, category and sorted flairs', () => {
   assert.equal(bucketName('5-hololive'), '5★ Hololive');
 });
 
+test('reviewed filter splits approved songs from the rest and survives a link', () => {
+  const done = { c: 'song', s: 4, f: '', d: 200, r: 1 };
+  const todo = { c: 'song', s: 4, f: '', d: 200 };
+  const only = hashToFilters('#' + filtersToHash({ ...hashToFilters('').filters, reviewed: 'only' })).filters;
+  const no = hashToFilters('#rev=no').filters;
+  assert.equal(only.reviewed, 'only');
+  assert.deepEqual([matches(done, only), matches(todo, only)], [true, false]);
+  assert.deepEqual([matches(done, no), matches(todo, no)], [false, true]);
+  assert.equal(hashToFilters('').filters.reviewed, 'any');
+});
+
 test('dead songs only show in the dead view, which survives a shared link', () => {
   const alive = { c: 'song', s: 4, f: '', d: 200, t: 'a' };
   const dead = { ...alive, z: { at: 1, why: 'deleted' } };

@@ -48,6 +48,11 @@
         <div id="secSeg" class="seg" role="radiogroup" aria-label="Secondary"></div>
       </section>
 
+      <section id="revSection" hidden>
+        <h3>Reviewed <small id="revCount"></small></h3>
+        <div id="revSeg" class="seg" role="radiogroup" aria-label="Reviewed"></div>
+      </section>
+
       <section>
         <h3>Length <small>(minutes)</small></h3>
         <div class="range">
@@ -85,6 +90,7 @@
           <button id="playBtn" class="btn primary">▶ Play</button>
           <button id="shuffleBtn" class="btn">🔀 Shuffle</button>
           <button id="unheardBtn" class="btn" title="Skips songs you heard recently; the rest are shuffled, favouring ones you have not heard for longest">✨ Shuffle unheard</button>
+          <button id="reviewBtn" class="btn" hidden title="Your own pass over the ratings: these songs, shuffled once, each played once. Approve the ones you have heard in bulk.">🎧 Review run</button>
           <button id="ytBtn" class="btn ghost" title="Opens the first 50 as a temporary playlist on YouTube">Open on YouTube</button>
           <button id="shareBtn" class="btn ghost" title="Copy a link to exactly these filters">🔗 Share</button>
           <button id="copyDeadBtn" class="btn ghost" hidden title="Copy the list as text: date, reason, playlist, title, channel, link">📋 Copy report</button>
@@ -102,12 +108,14 @@
       <div class="np">
         <div id="npTitle" class="np-title"></div>
         <div id="npMeta" class="np-meta"></div>
+        <div id="npRate" class="np-rate" hidden></div>
       </div>
       <div class="dock-controls">
         <button id="prevBtn" class="icon-btn" aria-label="Previous">⏮</button>
         <button id="ppBtn" class="icon-btn" aria-label="Play or pause">⏯</button>
         <button id="nextBtn" class="icon-btn" aria-label="Next">⏭</button>
         <span id="modeLabel" class="mode-label"></span>
+        <button id="approveBtn" class="btn small" hidden>✅ Approve</button>
         <button id="queueBtn" class="btn ghost small">Queue</button>
         <button id="closeDock" class="icon-btn" aria-label="Close player">✕</button>
       </div>
@@ -130,6 +138,24 @@
       <h3>About</h3>
       <p class="muted">Ratings are kept up to date by the companion userscript, <a href="https://github.com/ProJ-Yeet/yt-channel-playlist-collector" target="_blank" rel="noopener">YouTube Channel Playlist Collector</a>. Player idea inspired by <a href="https://github.com/imagevars/playlistShuffle" target="_blank" rel="noopener">playlistShuffle</a>. <a href="https://github.com/ProJ-Yeet/yt-music-library" target="_blank" rel="noopener">Source on GitHub</a>.</p>
       <div class="dlg-row end"><button class="btn primary">Done</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="approveDlg" class="approve-dlg">
+    <form method="dialog">
+      <h2>Approve ratings</h2>
+      <p class="muted">Songs from your review run, latest first. Ticked = you heard enough of it (skipped ones start unticked). Fix a rating with its letter or stars, then approve.</p>
+      <div class="dlg-row">
+        <button id="apAll" type="button" class="btn ghost small">Tick all</button>
+        <button id="apNone" type="button" class="btn ghost small">Untick all</button>
+        <span id="apCount" class="muted"></span>
+      </div>
+      <ol id="apList" class="ap-list"></ol>
+      <div class="dlg-row end">
+        <button id="apBack" type="button" class="btn ghost" title="Put the unticked songs back into the run, to hear them again later">↺ Unticked back in the run</button>
+        <button class="btn ghost">Close</button>
+        <button id="apGo" type="button" class="btn primary">Approve ticked</button>
+      </div>
     </form>
   </dialog>
 

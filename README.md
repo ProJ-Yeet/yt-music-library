@@ -39,6 +39,12 @@ required. Suggestions are welcome on [Discord](https://discord.gg/htkpNjk5yq).
 
 Some videos aren't allowed to play outside YouTube. Those are skipped.
 
+**🎧 Review run** (owner only) is for going over the ratings by ear. It shuffles the songs shown
+once and plays each one once, skipping ones already approved. The player shows the song's letter
+and stars so you can fix them as it plays, and **✅ Approve** ticks off everything you heard in one
+go. Your place in the run is kept in the browser and the approvals in the library, so you can stop
+and pick it up days later. The **Reviewed** filter shows how far you are.
+
 **🪦 Dead videos** lists songs that died on YouTube (deleted, private, blocked). They're out of
 their playlist but kept here with the date, the reason and where they were, plus a link to search
 for another upload. **📋 Copy report** gives the list as text. When your browser finds a video that looks dead (a blank thumbnail, or the

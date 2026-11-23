@@ -27,7 +27,7 @@ function h(tag, attrs = {}, ...kids) {
   for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
   return el;
 }
-const LS = { heard: 'ytml-heard-v1', settings: 'ytml-settings-v1', queue: 'ytml-queue-v1' };
+const LS = { heard: 'ytml-heard-v1', settings: 'ytml-settings-v1', queue: 'ytml-queue-v1', review: 'ytml-review-v1' };
 function lsGet(key, dflt) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : dflt; } catch { return dflt; }
 }
@@ -108,6 +108,8 @@ function rebuild() {
   for (const v of lib) if (!randomKey.has(v.id)) randomKey.set(v.id, Math.random());
   render({ keep: true });
   refreshQueueList();
+  renderNpRate();
+  if ($('approveDlg').open) renderApprove();
 }
 
 function setLive(fromServer) {
@@ -215,6 +217,7 @@ function buildFilterPanel() {
 
   seg($('longSeg'), 'long');
   seg($('secSeg'), 'secondary');
+  seg($('revSeg'), 'reviewed');
 
   $('q').value = filters.q;
   $('minMin').value = filters.minMin ?? '';
@@ -258,6 +261,7 @@ $('resetBtn').addEventListener('click', () => {
   filters.long = 'any'; filters.secondary = 'any';
   filters.minMin = null; filters.maxMin = null; filters.q = '';
   filters.dead = 'hide';
+  filters.reviewed = 'any';
   buildFilterPanel();
   changed();
 });
@@ -280,6 +284,8 @@ function updateCounts() {
   for (const b of $('catChips').children) b.querySelector('.n').textContent = (cat[b.dataset.cat] || 0).toLocaleString();
   for (const b of $('starChips').children) b.querySelector('.n').textContent = (star[b.dataset.star] || 0).toLocaleString();
   $('deadN').textContent = lib.reduce((n, v) => n + (v.z ? 1 : 0), 0).toLocaleString();
+  const alive = lib.filter((v) => !v.z);
+  $('revCount').textContent = `(${alive.filter((v) => v.r).length.toLocaleString()} of ${alive.length.toLocaleString()})`;
 }
 
 // ---------------------------------------------------------------------------
@@ -313,6 +319,9 @@ function render({ keep = false } = {}) {
   const deadView = filters.dead === 'only';
   for (const id of ['playBtn', 'shuffleBtn', 'unheardBtn', 'ytBtn']) $(id).hidden = deadView;
   $('copyDeadBtn').hidden = !deadView;
+  $('revSection').hidden = !isOwner;
+  $('reviewBtn').hidden = !isOwner || deadView;
+  updateReviewUi();
   if (!list.length) {
     $('grid').append(h('div', { class: 'empty' }, deadView
       ? 'No dead videos on record.'
@@ -479,6 +488,9 @@ function openMenu(id, anchor) {
     }, fl.name))),
     h('a', { href: ytUrl(id), target: '_blank', rel: 'noopener' }, 'Open on YouTube ↗'),
   );
+  // Inside an open dialog the menu must live in it, or the dialog covers it.
+  const host = document.querySelector('dialog[open]') || document.body;
+  if (menu.parentElement !== host) host.append(menu);
   menu.hidden = false;
   const r = anchor.getBoundingClientRect();
   const w = menu.offsetWidth;
@@ -507,6 +519,7 @@ const player = new Player($('ytmount'), {
     if (UNPLAYABLE.has(code) && id) {
       unplayable.add(id);
       reportDead(id, `e${code}`);
+      if (queue.mode === 'review') noteListened(id, 'unplayable');
       toast('This one can’t play outside YouTube, skipping. (Open it on YouTube from its card menu.)');
       setTimeout(next, 1200);
     }
@@ -519,11 +532,12 @@ function markHeard() {
   heardLogged = true;
   heard[id] = Date.now();
   lsSet(LS.heard, heard);
+  if (queue.mode === 'review') noteListened(id, 'heard');
   patchCards(id);
   updateSummary();
 }
 
-const MODE_LABEL = { play: 'In order', shuffle: 'Shuffled', unheard: 'Shuffle unheard', pick: 'From your pick' };
+const MODE_LABEL = { play: 'In order', shuffle: 'Shuffled', unheard: 'Shuffle unheard', pick: 'From your pick', review: '🎧 Review run' };
 function startQueue(ids, mode, i = 0) {
   if (!ids.length) { toast('Nothing to play with these filters.'); return; }
   queue = { ids, i, mode };
@@ -545,13 +559,24 @@ function playCurrent() {
   $('npMeta').textContent = v ? `${v.a || ''} · ${cat ? cat.name : ''} · ${'★'.repeat(v.s || 0)} · ${formatDuration(v.d)}` : '';
   $('modeLabel').textContent = `${MODE_LABEL[queue.mode] || ''} · ${queue.i + 1} / ${queue.ids.length}`;
   document.title = `${v ? v.t : id} · Music Library`;
+  if (queue.mode === 'review' && review) {
+    review.i = queue.i;
+    noteListened(id, 'skipped'); // upgraded to "heard" once enough of it has played
+  }
+  renderNpRate();
   for (const el of document.querySelectorAll('.card.playing')) el.classList.remove('playing');
   for (const el of document.querySelectorAll(`.card[data-id="${CSS.escape(id)}"]`)) el.classList.add('playing');
   refreshQueueList();
 }
 function next() {
   if (!queue) return;
-  if (queue.i < queue.ids.length - 1) { queue.i++; saveQueue(); playCurrent(); } else toast('End of the list.');
+  let i = queue.i + 1;
+  // A review run plays each song once: skip ones approved or dead meanwhile.
+  if (queue.mode === 'review') {
+    while (i < queue.ids.length && reviewDone(queue.ids[i])) i++;
+  }
+  if (i < queue.ids.length) { queue.i = i; saveQueue(); playCurrent(); }
+  else toast(queue.mode === 'review' ? 'End of the review run. Approve what you heard with ✅.' : 'End of the list.');
 }
 function prev() {
   if (!queue || queue.i === 0) return;
@@ -589,6 +614,147 @@ $('shareBtn').addEventListener('click', async () => {
   const url = `${location.origin}${location.pathname}#${filtersToHash(filters, { sort: sortMode !== 'added' ? sortMode : '' })}`;
   try { await navigator.clipboard.writeText(url); toast('Link copied. Anyone with it sees these filters.'); }
   catch { prompt('Copy this link:', url); }
+});
+
+// ---------------------------------------------------------------------------
+// Review run (owner): the chosen songs shuffled once, each played once, kept
+// in this browser. Whatever has played waits in "listened" until approved;
+// approving writes v.r (the date) to the library, which ends its review.
+// ---------------------------------------------------------------------------
+let review = lsGet(LS.review, null); // { ids, i, listened: { id: { k, t } } }
+const saveReview = () => lsSet(LS.review, review);
+const reviewDone = (id) => { const v = byId.get(id); return !v || !!v.r || !!v.z; };
+function reviewLeft() {
+  if (!review) return 0;
+  let n = 0;
+  for (let k = review.i; k < review.ids.length; k++) if (!reviewDone(review.ids[k]) && !review.listened[review.ids[k]]) n++;
+  return n;
+}
+function noteListened(id, k) {
+  if (!review || !isOwner) return;
+  const rank = { skipped: 0, unplayable: 1, heard: 2 };
+  const old = review.listened[id];
+  if (old && rank[old.k] >= rank[k]) return;
+  review.listened[id] = { k, t: Date.now() };
+  saveReview();
+  updateReviewUi();
+}
+function pendingApprovals() {
+  if (!review) return [];
+  return Object.entries(review.listened)
+    .filter(([id]) => byId.has(id) && !reviewDone(id))
+    .sort((a, b) => b[1].t - a[1].t);
+}
+function updateReviewUi() {
+  if (!isOwner) { $('approveBtn').hidden = true; return; }
+  const n = pendingApprovals().length;
+  $('approveBtn').hidden = !n;
+  $('approveBtn').textContent = `✅ Approve (${n})`;
+  const left = reviewLeft();
+  $('reviewBtn').textContent = review && left ? `🎧 Continue review (${left.toLocaleString()} left)` : '🎧 Review run';
+}
+
+$('reviewBtn').addEventListener('click', () => {
+  if (review && reviewLeft() && confirm(`Continue your review run? ${reviewLeft().toLocaleString()} songs are left.\n\nOK = continue, Cancel = start a new run from the songs shown now.`)) {
+    startQueue(review.ids, 'review', Math.max(0, review.i));
+    return;
+  }
+  const ids = shuffle(list.filter((v) => !v.r && !v.z).map((v) => v.id));
+  if (!ids.length) { toast('Every song shown here is already approved.'); return; }
+  // Songs heard but not approved yet stay waiting for approval.
+  review = { ids, i: 0, listened: review ? Object.fromEntries(pendingApprovals()) : {}, startedAt: Date.now() };
+  saveReview();
+  startQueue(ids, 'review', 0);
+  toast(`Review run: ${ids.length.toLocaleString()} songs, shuffled, each played once.`);
+});
+
+// The playing song's rating, editable while it plays (owner).
+function renderNpRate() {
+  const box = $('npRate');
+  const id = queue && queue.ids[queue.i];
+  const v = id && byId.get(id);
+  if (!isOwner || !v) { box.hidden = true; return; }
+  const cat = CAT_BY_ID[v.c];
+  box.replaceChildren(
+    h('button', { class: 'cat', 'data-c': v.c, type: 'button', title: 'Change category / flairs',
+      onclick: (e) => { e.stopPropagation(); openMenu(v.id, e.currentTarget); } }, cat ? cat.short : '?'),
+    starsEl(v),
+    h('span', { class: 'np-flairs' }, FLAIRS.filter((x) => (v.f || '').includes(x.id)).map((x) => x.id === 'L' ? 'Long' : '2nd').join(' · ')),
+    v.r ? h('span', { class: 'np-ok', title: `Approved ${dayStr(v.r)}` }, '✓ approved') : null,
+  );
+  box.hidden = false;
+}
+
+// Approve dialog
+const apTicks = new Map(); // id → ticked
+function renderApprove() {
+  const items = pendingApprovals();
+  for (const [id, x] of items) if (!apTicks.has(id)) apTicks.set(id, x.k === 'heard');
+  const note = { skipped: 'skipped', unplayable: 'could not play here', heard: '' };
+  $('apList').replaceChildren(...items.map(([id, x]) => {
+    const v = byId.get(id);
+    const cat = CAT_BY_ID[v.c];
+    const box = h('input', { type: 'checkbox', checked: apTicks.get(id) || null,
+      onchange: (e) => { apTicks.set(id, e.currentTarget.checked); countApprove(); } });
+    return h('li', {},
+      box,
+      h('img', { src: thumb(id), alt: '', loading: 'lazy' }),
+      h('div', { class: 'ap-text' },
+        h('div', { class: 'title', title: v.t }, v.t || id),
+        h('div', { class: 'chan' }, [v.a || '', note[x.k] ? ` · ${note[x.k]}` : ''].join(''))),
+      h('button', { class: 'cat', 'data-c': v.c, type: 'button', title: 'Change category / flairs',
+        onclick: (e) => { e.stopPropagation(); openMenu(id, e.currentTarget); } }, cat ? cat.short : '?'),
+      starsEl(v));
+  }));
+  countApprove();
+}
+function countApprove() {
+  const items = pendingApprovals();
+  const n = items.filter(([id]) => apTicks.get(id)).length;
+  $('apCount').textContent = `${n} of ${items.length} ticked`;
+  $('apGo').textContent = `Approve ticked (${n})`;
+  $('apGo').disabled = !n;
+}
+$('approveBtn').addEventListener('click', () => { renderApprove(); $('approveDlg').showModal(); });
+$('apAll').addEventListener('click', () => { for (const [id] of pendingApprovals()) apTicks.set(id, true); renderApprove(); });
+$('apNone').addEventListener('click', () => { for (const [id] of pendingApprovals()) apTicks.set(id, false); renderApprove(); });
+$('apBack').addEventListener('click', () => {
+  const back = pendingApprovals().filter(([id]) => !apTicks.get(id)).map(([id]) => id);
+  if (!back.length) { toast('Nothing unticked.'); return; }
+  for (const id of back) { delete review.listened[id]; apTicks.delete(id); review.ids.push(id); }
+  if (queue && queue.mode === 'review') { queue.ids = review.ids.slice(); saveQueue(); }
+  saveReview();
+  renderApprove();
+  updateReviewUi();
+  toast(`${back.length} song${back.length === 1 ? '' : 's'} will come round again later in the run.`);
+});
+$('apGo').addEventListener('click', async () => {
+  const ids = pendingApprovals().map(([id]) => id).filter((id) => apTicks.get(id));
+  if (!ids.length || !isOwner) return;
+  $('apGo').disabled = true;
+  const now = Date.now();
+  const byChunk = new Map();
+  for (const id of ids) {
+    const c = chunkDocId(chunkOf(id));
+    if (!byChunk.has(c)) byChunk.set(c, []);
+    byChunk.get(c).push(id);
+  }
+  try {
+    const batch = fs.writeBatch(db);
+    for (const [c, part] of byChunk) {
+      batch.update(fs.doc(db, 'library', c), ...part.flatMap((id) => [new fs.FieldPath('v', id, 'r'), now]));
+    }
+    await batch.commit();
+    for (const id of ids) { delete review.listened[id]; apTicks.delete(id); }
+    saveReview();
+    toast(`Approved ${ids.length} song${ids.length === 1 ? '' : 's'}.`);
+    renderApprove();
+    updateReviewUi();
+    if (!pendingApprovals().length) $('approveDlg').close();
+  } catch (e) {
+    toast(`Could not save: ${e.code || e.message}`);
+  }
+  countApprove();
 });
 
 $('prevBtn').addEventListener('click', prev);

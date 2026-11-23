@@ -255,3 +255,23 @@ dialog h3 { margin: 16px 0 4px; font-size: 14px; }
   .dock-video { max-height: 30vh; width: 100%; }
   .actions .btn { padding: 6px 10px; }
 }
+
+/* Review run */
+.np-rate { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.np-rate .cat { cursor: pointer; }
+.np-rate .stars { padding: 0; }
+.np-flairs { font-size: 12px; color: var(--muted); }
+.np-ok { font-size: 12px; color: var(--accent); }
+.approve-dlg { width: min(720px, 94vw); }
+.ap-list { list-style: none; margin: 10px 0; padding: 0; max-height: 60vh; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.ap-list li { display: grid; grid-template-columns: auto 64px 1fr auto auto; align-items: center; gap: 10px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.ap-list img { width: 64px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; }
+.ap-list .ap-text { min-width: 0; }
+.ap-list .title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ap-list .cat { cursor: pointer; }
+.ap-list .stars { padding: 0; }
+@media (max-width: 560px) {
+  .ap-list li { grid-template-columns: auto 1fr auto; }
+  .ap-list img { display: none; }
+  .ap-list .stars { grid-column: 2 / -1; }
+}
