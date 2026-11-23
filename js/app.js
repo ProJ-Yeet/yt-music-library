@@ -1,9 +1,9 @@
-import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=5';
+import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=6';
 import {
   CATEGORIES, CAT_BY_ID, FLAIRS, CHUNKS, chunkOf, chunkDocId, withAutoFlairs, normFlairs,
   bucketKey, bucketName, matches, shuffle, shuffleUnheard, filtersToHash, hashToFilters, formatDuration,
-} from './model.js?v=5';
-import { Player, UNPLAYABLE } from './player.js?v=5';
+} from './model.js?v=6';
+import { Player, UNPLAYABLE } from './player.js?v=6';
 
 const [{ initializeApp }, fs, au] = await Promise.all([
   import(`${FIREBASE_SDK}/firebase-app.js`),
@@ -525,7 +525,16 @@ const player = new Player($('ytmount'), {
     }
   },
   onState: (s) => onPlayerState(s),
+  // Spinning at 0:00 with no error: try the song once more in a fresh player, then move on.
+  onStuck: () => {
+    if (userPaused) return;
+    if (stuckTries++ === 0) { toast('Stuck loading, retrying…'); player.rebuild(); }
+    else if (++stuckSongs >= 3) { toast('Several songs in a row would not start. Press ⏯ to try again.'); userPaused = true; }
+    else { toast('Still stuck, skipping to the next song.'); next(); }
+  },
 });
+let stuckTries = 0;
+let stuckSongs = 0; // in a row; a song that really plays resets it
 
 // ---------------------------------------------------------------------------
 // Playing on with the screen off / in another app (phones)
@@ -561,7 +570,7 @@ function keepAwake(on) {
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = on ? 'playing' : 'paused';
 }
 function onPlayerState(s) {
-  if (s === 1) { userPaused = false; keepAwake(true); return; }
+  if (s === 1) { userPaused = false; stuckSongs = 0; keepAwake(true); return; }
   if (s !== 2) return;
   if (!document.hidden) { userPaused = true; keepAwake(false); return; } // paused on the page: that was you
   if (userPaused) return;
@@ -625,6 +634,7 @@ function playCurrent() {
   document.body.style.setProperty('--dock-h', `${$('dock').offsetHeight}px`);
   heardLogged = false;
   userPaused = false;
+  stuckTries = 0;
   player.play(id);
   keepAwake(true);
   const v = byId.get(id);

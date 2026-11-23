@@ -19,16 +19,24 @@ function loadApi() {
 // 101/150/153 embedding not allowed (often region or label restrictions).
 export const UNPLAYABLE = new Set([2, 5, 100, 101, 150, 153]);
 
+// A song that has not moved for this long while it should be playing is
+// stuck: usually the embed waiting on an ad that an ad blocker removed (it
+// spins at 0:00 forever and never reports an error).
+const STUCK_MS = 20000;
+
 export class Player {
-  constructor(mount, { onEnded, onError, onState, onTick } = {}) {
+  constructor(mount, { onEnded, onError, onState, onTick, onStuck } = {}) {
     this.mount = mount;
-    this.cb = { onEnded, onError, onState, onTick };
+    this.cb = { onEnded, onError, onState, onTick, onStuck };
     this.yt = null;
     this.ready = null;
     this.timer = null;
+    this.id = null;
   }
 
   async play(videoId) {
+    this.id = videoId;
+    this._startTimer();
     await loadApi();
     if (!this.yt) {
       this.ready = new Promise((resolve) => {
@@ -51,7 +59,13 @@ export class Player {
       await this.ready;
       this.yt.loadVideoById(videoId);
     }
-    this._startTimer();
+  }
+
+  // Throw the embed away and load the current song in a fresh one.
+  rebuild() {
+    const id = this.id;
+    this.stop();
+    return this.play(id);
   }
 
   _state(s) {
@@ -61,9 +75,20 @@ export class Player {
 
   _startTimer() {
     clearInterval(this.timer);
+    let lastT = -1;
+    let lastMove = Date.now();
     this.timer = setInterval(() => {
-      if (!this.yt || !this.yt.getCurrentTime || !this.cb.onTick) return;
-      this.cb.onTick(this.yt.getCurrentTime() || 0, this.yt.getDuration() || 0);
+      const ok = this.yt && this.yt.getCurrentTime;
+      const t = ok ? this.yt.getCurrentTime() || 0 : 0;
+      const s = ok ? this.yt.getPlayerState() : -1;
+      // Paused (2) or ended (0) is not stuck; playing only counts when time moves.
+      if (s === 2 || s === 0 || (s === 1 && t !== lastT)) lastMove = Date.now();
+      lastT = t;
+      if (Date.now() - lastMove > STUCK_MS && this.cb.onStuck) {
+        lastMove = Date.now();
+        this.cb.onStuck();
+      }
+      if (ok && this.cb.onTick) this.cb.onTick(t, this.yt.getDuration() || 0);
     }, 1000);
   }
 
