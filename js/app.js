@@ -1,9 +1,9 @@
-import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=7';
+import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=8';
 import {
   CATEGORIES, CAT_BY_ID, FLAIRS, CHUNKS, chunkOf, chunkDocId, withAutoFlairs, normFlairs,
   bucketKey, bucketName, matches, shuffle, shuffleUnheard, filtersToHash, hashToFilters, formatDuration,
-} from './model.js?v=7';
-import { Player, UNPLAYABLE } from './player.js?v=7';
+} from './model.js?v=8';
+import { Player, UNPLAYABLE } from './player.js?v=8';
 
 const [{ initializeApp }, fs, au] = await Promise.all([
   import(`${FIREBASE_SDK}/firebase-app.js`),
@@ -787,7 +787,7 @@ function renderNpRate() {
       onclick: (e) => { e.stopPropagation(); openMenu(v.id, e.currentTarget); } }, cat ? cat.short : '?'),
     starsEl(v),
     h('span', { class: 'np-flairs' }, FLAIRS.filter((x) => (v.f || '').includes(x.id)).map((x) => x.id === 'L' ? 'Long' : '2nd').join(' · ')),
-    v.r ? h('span', { class: 'np-ok', title: `Approved ${dayStr(v.r)}` }, '✓ approved') : null,
+    v.r ? h('span', { class: 'np-ok', title: `Approved ${dayStr(v.r)}` }, '✓ Approved') : null,
   ].filter(Boolean));
   box.hidden = false;
 }
