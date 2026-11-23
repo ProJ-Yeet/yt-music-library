@@ -15,6 +15,8 @@ star rating and a couple of flairs. Pick what you're in the mood for and it play
 
 **https://proj-yeet.github.io/yt-music-library/**
 
+![The library: filters on the left, songs with their category letter and stars](docs/site.jpg)
+
 The ratings come from the **[YouTube Channel Playlist Collector](https://github.com/ProJ-Yeet/yt-channel-playlist-collector)**
 userscript. Rate a song on YouTube and it appears here a second later, already sorted into its
 playlist.
