@@ -1,9 +1,9 @@
-import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=9';
+import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=10';
 import {
   CATEGORIES, CAT_BY_ID, FLAIRS, CHUNKS, chunkOf, chunkDocId, withAutoFlairs, normFlairs,
   bucketKey, bucketName, matches, shuffle, shuffleUnheard, filtersToHash, hashToFilters, formatDuration,
-} from './model.js?v=9';
-import { Player, UNPLAYABLE } from './player.js?v=9';
+} from './model.js?v=10';
+import { Player, UNPLAYABLE } from './player.js?v=10';
 
 const [{ initializeApp }, fs, au] = await Promise.all([
   import(`${FIREBASE_SDK}/firebase-app.js`),
@@ -110,6 +110,7 @@ function rebuild() {
   refreshQueueList();
   renderNpRate();
   if ($('approveDlg').open) renderApprove();
+  if ($('bulkDlg').open) renderBulk();
 }
 
 function setLive(fromServer) {
@@ -329,6 +330,7 @@ function render({ keep = false } = {}) {
   $('copyDeadBtn').hidden = !deadView;
   $('revSection').hidden = !isOwner;
   $('reviewBtn').hidden = !isOwner || deadView;
+  $('bulkBtn').hidden = !isOwner || deadView;
   updateReviewUi();
   if (!list.length) {
     $('grid').append(h('div', { class: 'empty' }, deadView
@@ -805,8 +807,11 @@ function renderApprove() {
     const cat = CAT_BY_ID[v.c];
     const box = h('input', { type: 'checkbox', checked: apTicks.get(id) || null,
       onchange: (e) => { apTicks.set(id, e.currentTarget.checked); if ($('apHideTicked').checked) renderApprove(); else countApprove(); } });
-    return h('li', {},
+    const on = apPreviewId === id;
+    return h('li', { class: on ? 'previewing' : '' },
       box,
+      h('button', { class: 'ap-play', type: 'button', 'aria-pressed': String(on),
+        title: on ? 'Stop' : 'Play it again here', onclick: () => apPreview(on ? null : id) }, on ? '■' : '▶'),
       h('img', { src: thumb(id), alt: '', loading: 'lazy' }),
       h('div', { class: 'ap-text' },
         h('div', { class: 'title', title: v.t }, v.t || id),
@@ -824,6 +829,24 @@ function countApprove() {
   $('apGo').textContent = `Approve ticked (${n})`;
   $('apGo').disabled = !n;
 }
+// Listen to a song again from the Approve dialog. One embed above the list,
+// so a re-render (after a rating change) does not restart it.
+let apPreviewId = null;
+function apPreview(id) {
+  apPreviewId = id;
+  const v = id && byId.get(id);
+  $('apPreview').hidden = !v;
+  if (v) {
+    if (player.isPlaying()) { userPaused = true; player.pause(); keepAwake(false); }
+    $('apFrame').src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+    $('apPreviewTitle').textContent = `${v.t || id} — ${v.a || ''}`;
+  } else {
+    $('apFrame').removeAttribute('src');
+  }
+  renderApprove();
+}
+$('apPreviewStop').addEventListener('click', () => apPreview(null));
+$('approveDlg').addEventListener('close', () => { if (apPreviewId) apPreview(null); });
 $('approveBtn').addEventListener('click', () => { renderApprove(); $('approveDlg').showModal(); });
 $('apHideTicked').addEventListener('change', renderApprove);
 $('apAll').addEventListener('click', () => { for (const [id] of pendingApprovals()) apTicks.set(id, true); renderApprove(); });
@@ -863,6 +886,77 @@ $('apGo').addEventListener('click', async () => {
     toast(`Could not save: ${e.code || e.message}`);
   }
   countApprove();
+});
+
+// ---------------------------------------------------------------------------
+// Bulk edit (owner): stars / category for every song of chosen channels,
+// among the songs shown now. Leaves approvals (v.r) alone.
+// ---------------------------------------------------------------------------
+const bkPicked = new Set();
+$('bkStars').replaceChildren(h('option', { value: '' }, 'no change'), ...[5, 4, 3, 2, 1].map((n) => h('option', { value: n }, '★'.repeat(n))));
+$('bkCat').replaceChildren(h('option', { value: '' }, 'no change'), ...CATEGORIES.map((c) => h('option', { value: c.id }, c.name)));
+const bulkSongs = () => list.filter((v) => !v.z && bkPicked.has(v.a || ''));
+function bulkChanges() {
+  const s = Number($('bkStars').value) || 0;
+  const c = $('bkCat').value;
+  return { s, c, songs: bulkSongs().filter((v) => (s && v.s !== s) || (c && v.c !== c)) };
+}
+function renderBulk() {
+  const counts = new Map();
+  for (const v of list) if (!v.z) counts.set(v.a || '', (counts.get(v.a || '') || 0) + 1);
+  const q = $('bkQ').value.trim().toLowerCase();
+  const rows = [...counts]
+    .filter(([a]) => bkPicked.has(a) || !q || a.toLowerCase().includes(q))
+    .sort((x, y) => bkPicked.has(y[0]) - bkPicked.has(x[0]) || y[1] - x[1] || x[0].localeCompare(y[0]))
+    .slice(0, 300);
+  $('bkList').replaceChildren(...rows.map(([a, n]) => h('li', {}, h('label', {},
+    h('input', { type: 'checkbox', checked: bkPicked.has(a) || null,
+      onchange: (e) => { if (e.currentTarget.checked) bkPicked.add(a); else bkPicked.delete(a); countBulk(); } }),
+    h('span', { class: 'bk-name', title: a }, a || '(no channel)'),
+    h('span', { class: 'n' }, n.toLocaleString())))));
+  countBulk();
+}
+function countBulk() {
+  const picked = bulkSongs();
+  const stars = {};
+  for (const v of picked) stars[v.s] = (stars[v.s] || 0) + 1;
+  const mix = Object.keys(stars).sort().reverse().map((k) => `${k}★ ${stars[k]}`).join(', ');
+  const { songs } = bulkChanges();
+  $('bkCount').textContent = bkPicked.size
+    ? `${bkPicked.size} channel${bkPicked.size === 1 ? '' : 's'} · ${picked.length.toLocaleString()} songs (${mix}) · ${songs.length.toLocaleString()} would change`
+    : 'No channel ticked.';
+  $('bkGo').textContent = `Change ${songs.length.toLocaleString()} song${songs.length === 1 ? '' : 's'}`;
+  $('bkGo').disabled = !songs.length;
+}
+$('bulkBtn').addEventListener('click', () => { $('bkQ').value = ''; renderBulk(); $('bulkDlg').showModal(); });
+$('bkQ').addEventListener('input', renderBulk);
+for (const id of ['bkStars', 'bkCat']) $(id).addEventListener('change', countBulk);
+$('bkClear').addEventListener('click', () => { bkPicked.clear(); renderBulk(); });
+$('bkGo').addEventListener('click', async () => {
+  const { s, c, songs } = bulkChanges();
+  if (!songs.length || !isOwner) return;
+  const what = [s ? '★'.repeat(s) : '', c ? CAT_BY_ID[c].name : ''].filter(Boolean).join(' ');
+  if (!confirm(`Set ${songs.length.toLocaleString()} songs to ${what}? Approvals are kept.`)) return;
+  $('bkGo').disabled = true;
+  const now = Date.now();
+  const byChunk = new Map();
+  for (const v of songs) {
+    const k = chunkDocId(chunkOf(v.id));
+    if (!byChunk.has(k)) byChunk.set(k, []);
+    const args = byChunk.get(k);
+    if (s && v.s !== s) args.push(new fs.FieldPath('v', v.id, 's'), s);
+    if (c && v.c !== c) args.push(new fs.FieldPath('v', v.id, 'c'), c);
+    args.push(new fs.FieldPath('v', v.id, 'u'), now);
+  }
+  try {
+    const batch = fs.writeBatch(db);
+    for (const [k, args] of byChunk) batch.update(fs.doc(db, 'library', k), ...args);
+    await batch.commit();
+    toast(`Changed ${songs.length.toLocaleString()} songs.`);
+  } catch (e) {
+    toast(`Could not save: ${e.code || e.message}`);
+  }
+  countBulk();
 });
 
 $('prevBtn').addEventListener('click', prev);

@@ -7,8 +7,8 @@
   <meta name="description" content="A rated YouTube music library: filter by category, stars and flairs, then play or shuffle it right here.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e0457b'/%3E%3Cpath d='M26 14v26.5a8 8 0 1 0 5 7.4V24l17-4v15.5a8 8 0 1 0 5 7.4V8z' fill='white'/%3E%3C/svg%3E">
   <!-- Bump ?v= on every release so browsers never mix an old script with a new page. -->
-  <link rel="stylesheet" href="style.css?v=9">
-  <script type="module" src="js/app.js?v=9"></script>
+  <link rel="stylesheet" href="style.css?v=10">
+  <script type="module" src="js/app.js?v=10"></script>
 </head>
 <body>
   <header class="top">
@@ -92,6 +92,7 @@
           <button id="shuffleBtn" class="btn">🔀 Shuffle</button>
           <button id="unheardBtn" class="btn" title="Skips songs you heard recently; the rest are shuffled, favouring ones you have not heard for longest">✨ Shuffle unheard</button>
           <button id="reviewBtn" class="btn" hidden title="Your own pass over the ratings: these songs, shuffled once, each played once. Approve the ones you have heard in bulk.">🎧 Review run</button>
+          <button id="bulkBtn" class="btn ghost" hidden title="Change the stars or category of every song from chosen channels (among the songs shown now). Approvals are kept.">✏️ Bulk edit</button>
           <button id="ytBtn" class="btn ghost" title="Opens the first 50 as a temporary playlist on YouTube">Open on YouTube</button>
           <button id="shareBtn" class="btn ghost" title="Copy a link to exactly these filters">🔗 Share</button>
           <button id="copyDeadBtn" class="btn ghost" hidden title="Copy the list as text: date, reason, playlist, title, channel, link">📋 Copy report</button>
@@ -149,14 +150,40 @@
       <div class="dlg-row">
         <button id="apAll" type="button" class="btn ghost small">Tick all</button>
         <button id="apNone" type="button" class="btn ghost small">Untick all</button>
-        <label class="muted"><input id="apHideTicked" type="checkbox"> Hide ticked</label>
+        <label class="muted"><input id="apHideTicked" type="checkbox" checked> Hide ticked</label>
         <span id="apCount" class="muted"></span>
+      </div>
+      <div id="apPreview" class="ap-preview" hidden>
+        <iframe id="apFrame" title="Song preview" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        <div class="ap-preview-side">
+          <div id="apPreviewTitle" class="title"></div>
+          <button id="apPreviewStop" type="button" class="btn ghost small">■ Stop</button>
+        </div>
       </div>
       <ol id="apList" class="ap-list"></ol>
       <div class="dlg-row end">
         <button id="apBack" type="button" class="btn ghost" title="Put the unticked songs back into the run, to hear them again later">↺ Unticked back in the run</button>
         <button class="btn ghost">Close</button>
         <button id="apGo" type="button" class="btn primary">Approve ticked</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="bulkDlg" class="approve-dlg">
+    <form method="dialog">
+      <h2>Change ratings by channel</h2>
+      <p class="muted">Tick channels from the songs shown now (narrow it first with the filters, e.g. only 3★). Their stars and/or category change together. Approved songs stay approved.</p>
+      <input id="bkQ" type="search" placeholder="Find a channel" autocomplete="off">
+      <ol id="bkList" class="bk-list"></ol>
+      <div class="dlg-row">
+        <label class="field-inline">Stars <select id="bkStars"></select></label>
+        <label class="field-inline">Category <select id="bkCat"></select></label>
+      </div>
+      <p id="bkCount" class="muted"></p>
+      <div class="dlg-row end">
+        <button id="bkClear" type="button" class="btn ghost">Untick all</button>
+        <button class="btn ghost">Close</button>
+        <button id="bkGo" type="button" class="btn primary">Change</button>
       </div>
     </form>
   </dialog>

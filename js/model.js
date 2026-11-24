@@ -5,6 +5,7 @@ export const CATEGORIES = [
   { id: 'song', name: 'Song', short: 'S', hint: 'Songs with lyrics' },
   { id: 'music', name: 'Music', short: 'M', hint: 'Instrumental, no words' },
   { id: 'relax', name: 'Relax', short: 'R', hint: 'Ambient, for working' },
+  { id: 'lofi', name: 'Lofi', short: 'Lo', hint: 'Lo-fi beats' },
   { id: 'slow', name: 'Slow', short: 'Sl', hint: 'Songs on the slow side' },
   { id: 'electric', name: 'Electric', short: 'E', hint: 'EDM' },
   { id: 'classical', name: 'Classical', short: 'C', hint: 'Classical' },
