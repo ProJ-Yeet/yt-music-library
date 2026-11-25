@@ -791,9 +791,23 @@ function renderNpRate() {
       onclick: (e) => { e.stopPropagation(); openMenu(v.id, e.currentTarget); } }, cat ? cat.short : '?'),
     starsEl(v),
     h('span', { class: 'np-flairs' }, FLAIRS.filter((x) => (v.f || '').includes(x.id)).map((x) => x.id === 'L' ? 'Long' : '2nd').join(' · ')),
-    v.r ? h('span', { class: 'np-ok', title: `Approved ${dayStr(v.r)}` }, '✓ Approved') : null,
-  ].filter(Boolean));
+    h('button', { class: v.r ? 'np-ok np-approve on' : 'np-approve', type: 'button', 'aria-pressed': String(!!v.r),
+      title: v.r ? `Approved ${dayStr(v.r)}. Click to unapprove.` : 'Approve this rating as it is',
+      onclick: () => setApproved(v.id, !v.r) }, v.r ? '✓ Approved' : '✅ Approve'),
+  ]);
   box.hidden = false;
+}
+// One-click approve / unapprove of a single song (the playing one).
+async function setApproved(id, on) {
+  if (!isOwner || !byId.has(id)) return;
+  try {
+    await fs.updateDoc(fs.doc(db, 'library', chunkDocId(chunkOf(id))),
+      new fs.FieldPath('v', id, 'r'), on ? Date.now() : fs.deleteField());
+    if (on && review && review.listened[id]) { delete review.listened[id]; apTicks.delete(id); saveReview(); }
+    updateReviewUi();
+  } catch (e) {
+    toast(`Could not save: ${e.code || e.message}`);
+  }
 }
 
 // Approve dialog

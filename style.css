@@ -263,6 +263,8 @@ dialog h3 { margin: 16px 0 4px; font-size: 14px; }
 .np-rate .stars { padding: 0; }
 .np-flairs { font-size: 12px; color: var(--muted); }
 .np-ok { font-size: 12px; color: var(--accent); }
+.np-approve { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; cursor: pointer; }
+.np-approve.on { border-color: var(--accent); color: var(--accent); background: transparent; }
 .approve-dlg { width: min(720px, 94vw); }
 .ap-list { list-style: none; margin: 10px 0; padding: 0; max-height: 60vh; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
 .ap-list li { display: grid; grid-template-columns: auto auto 64px 1fr auto auto; align-items: center; gap: 10px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
