@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -7,20 +7,20 @@
   <meta name="description" content="A rated YouTube music library: filter by category, stars and flairs, then play or shuffle it right here.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e0457b'/%3E%3Cpath d='M26 14v26.5a8 8 0 1 0 5 7.4V24l17-4v15.5a8 8 0 1 0 5 7.4V8z' fill='white'/%3E%3C/svg%3E">
   <!-- Bump ?v= on every release so browsers never mix an old script with a new page. -->
-  <link rel="stylesheet" href="style.css?v=10">
-  <script type="module" src="js/app.js?v=10"></script>
+  <link rel="stylesheet" href="style.css?v=11">
+  <script type="module" src="js/app.js?v=11"></script>
 </head>
 <body>
   <header class="top">
-    <button id="filtersToggle" class="icon-btn only-narrow" aria-label="Show filters">☰</button>
+    <button id="filtersToggle" class="icon-btn only-narrow" aria-label="Show filters">â˜°</button>
     <div class="brand">
-      <span class="logo" aria-hidden="true">♫</span>
+      <span class="logo" aria-hidden="true">â™«</span>
       <span>Music Library</span>
-      <span id="liveDot" class="live" title="Connecting…"></span>
+      <span id="liveDot" class="live" title="Connectingâ€¦"></span>
     </div>
     <div class="top-actions">
       <span id="ownerBadge" class="owner-badge" hidden>Editing</span>
-      <button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙</button>
+      <button id="settingsBtn" class="icon-btn" aria-label="Settings">âš™</button>
       <button id="signInBtn" class="btn ghost">Sign in</button>
     </div>
   </header>
@@ -65,7 +65,7 @@
 
       <section>
         <h3>Dead videos</h3>
-        <button id="deadBtn" class="chip" type="button" aria-pressed="false" title="Songs that died on YouTube (deleted, private, blocked). They were taken out of their playlist, but the record is kept so they can be replaced.">🪦 Show dead videos <span id="deadN" class="n">0</span></button>
+        <button id="deadBtn" class="chip" type="button" aria-pressed="false" title="Songs that died on YouTube (deleted, private, blocked). They were taken out of their playlist, but the record is kept so they can be replaced.">ðŸª¦ Show dead videos <span id="deadN" class="n">0</span></button>
       </section>
 
       <section>
@@ -74,8 +74,8 @@
           <option value="added">Newest added</option>
           <option value="stars">Most stars</option>
           <option value="random">Random</option>
-          <option value="title">Title A–Z</option>
-          <option value="channel">Channel A–Z</option>
+          <option value="title">Title Aâ€“Z</option>
+          <option value="channel">Channel Aâ€“Z</option>
           <option value="long">Longest</option>
           <option value="short">Shortest</option>
         </select>
@@ -86,16 +86,16 @@
 
     <main>
       <div class="actionbar">
-        <div id="summary" class="summary">Loading library…</div>
+        <div id="summary" class="summary">Loading libraryâ€¦</div>
         <div class="actions">
-          <button id="playBtn" class="btn primary">▶ Play</button>
-          <button id="shuffleBtn" class="btn">🔀 Shuffle</button>
-          <button id="unheardBtn" class="btn" title="Skips songs you heard recently; the rest are shuffled, favouring ones you have not heard for longest">✨ Shuffle unheard</button>
-          <button id="reviewBtn" class="btn" hidden title="Your own pass over the ratings: these songs, shuffled once, each played once. Approve the ones you have heard in bulk.">🎧 Review run</button>
-          <button id="bulkBtn" class="btn ghost" hidden title="Change the stars or category of every song from chosen channels (among the songs shown now). Approvals are kept.">✏️ Bulk edit</button>
+          <button id="playBtn" class="btn primary">â–¶ Play</button>
+          <button id="shuffleBtn" class="btn">ðŸ”€ Shuffle</button>
+          <button id="unheardBtn" class="btn" title="Skips songs you heard recently; the rest are shuffled, favouring ones you have not heard for longest">âœ¨ Shuffle unheard</button>
+          <button id="reviewBtn" class="btn" hidden title="Your own pass over the ratings: these songs, shuffled once, each played once. Approve the ones you have heard in bulk.">ðŸŽ§ Review run</button>
+          <button id="bulkBtn" class="btn ghost" hidden title="Change the stars or category of every song from chosen channels (among the songs shown now). Approvals are kept.">âœï¸ Bulk edit</button>
           <button id="ytBtn" class="btn ghost" title="Opens the first 50 as a temporary playlist on YouTube">Open on YouTube</button>
-          <button id="shareBtn" class="btn ghost" title="Copy a link to exactly these filters">🔗 Share</button>
-          <button id="copyDeadBtn" class="btn ghost" hidden title="Copy the list as text: date, reason, playlist, title, channel, link">📋 Copy report</button>
+          <button id="shareBtn" class="btn ghost" title="Copy a link to exactly these filters">ðŸ”— Share</button>
+          <button id="copyDeadBtn" class="btn ghost" hidden title="Copy the list as text: date, reason, playlist, title, channel, link">ðŸ“‹ Copy report</button>
         </div>
       </div>
       <div id="notice" class="notice" hidden></div>
@@ -113,13 +113,13 @@
         <div id="npRate" class="np-rate" hidden></div>
       </div>
       <div class="dock-controls">
-        <button id="prevBtn" class="icon-btn" aria-label="Previous">⏮</button>
-        <button id="ppBtn" class="icon-btn" aria-label="Play or pause">⏯</button>
-        <button id="nextBtn" class="icon-btn" aria-label="Next">⏭</button>
+        <button id="prevBtn" class="icon-btn" aria-label="Previous">â®</button>
+        <button id="ppBtn" class="icon-btn" aria-label="Play or pause">â¯</button>
+        <button id="nextBtn" class="icon-btn" aria-label="Next">â­</button>
         <span id="modeLabel" class="mode-label"></span>
-        <button id="approveBtn" class="btn small" hidden>✅ Approve</button>
+        <button id="approveBtn" class="btn small" hidden>âœ… Approve</button>
         <button id="queueBtn" class="btn ghost small">Queue</button>
-        <button id="closeDock" class="icon-btn" aria-label="Close player">✕</button>
+        <button id="closeDock" class="icon-btn" aria-label="Close player">âœ•</button>
       </div>
       <ol id="queueList" class="queue" hidden></ol>
     </div>
@@ -157,12 +157,12 @@
         <iframe id="apFrame" title="Song preview" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         <div class="ap-preview-side">
           <div id="apPreviewTitle" class="title"></div>
-          <button id="apPreviewStop" type="button" class="btn ghost small">■ Stop</button>
+          <button id="apPreviewStop" type="button" class="btn ghost small">â–  Stop</button>
         </div>
       </div>
       <ol id="apList" class="ap-list"></ol>
       <div class="dlg-row end">
-        <button id="apBack" type="button" class="btn ghost" title="Put the unticked songs back into the run, to hear them again later">↺ Unticked back in the run</button>
+        <button id="apBack" type="button" class="btn ghost" title="Put the unticked songs back into the run, to hear them again later">â†º Unticked back in the run</button>
         <button class="btn ghost">Close</button>
         <button id="apGo" type="button" class="btn primary">Approve ticked</button>
       </div>
@@ -172,7 +172,7 @@
   <dialog id="bulkDlg" class="approve-dlg">
     <form method="dialog">
       <h2>Change ratings by channel</h2>
-      <p class="muted">Tick channels from the songs shown now (narrow it first with the filters, e.g. only 3★). Their stars and/or category change together. Approved songs stay approved.</p>
+      <p class="muted">Tick channels from the songs shown now (narrow it first with the filters, e.g. only 3â˜…). Their stars and/or category change together. Approved songs stay approved.</p>
       <input id="bkQ" type="search" placeholder="Find a channel" autocomplete="off">
       <ol id="bkList" class="bk-list"></ol>
       <div class="dlg-row">
