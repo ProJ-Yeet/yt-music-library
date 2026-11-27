@@ -1,9 +1,9 @@
-import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=10';
+import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=12';
 import {
   CATEGORIES, CAT_BY_ID, FLAIRS, CHUNKS, chunkOf, chunkDocId, withAutoFlairs, normFlairs,
   bucketKey, bucketName, matches, shuffle, shuffleUnheard, filtersToHash, hashToFilters, formatDuration,
-} from './model.js?v=10';
-import { Player, UNPLAYABLE } from './player.js?v=10';
+} from './model.js?v=12';
+import { Player, UNPLAYABLE } from './player.js?v=12';
 
 const [{ initializeApp }, fs, au] = await Promise.all([
   import(`${FIREBASE_SDK}/firebase-app.js`),
@@ -83,7 +83,7 @@ let plToBucket = new Map();
 let user = null;
 let isOwner = false;
 let heard = lsGet(LS.heard, {});
-const settings = Object.assign({ cooldownDays: 7 }, lsGet(LS.settings, {}));
+const settings = Object.assign({ cooldownDays: 7, volume: 100, thumbOnly: false }, lsGet(LS.settings, {}));
 const randomKey = new Map();
 
 const initial = hashToFilters(location.hash);
@@ -546,6 +546,38 @@ const player = new Player($('ytmount'), {
 let stuckTries = 0;
 let stuckSongs = 0; // in a row; a song that really plays resets it
 
+// Volume lives outside the embed: YouTube's own slider is tiny and only shows on hover.
+let volBeforeMute = settings.volume || 100;
+function setVolume(v) {
+  settings.volume = v;
+  if (v > 0) volBeforeMute = v;
+  player.setVolume(v);
+  $('volRange').value = v;
+  $('volRange').style.setProperty('--fill', `${v}%`);
+  $('muteBtn').textContent = v === 0 ? '🔇' : v < 50 ? '🔉' : '🔊';
+  lsSet(LS.settings, settings);
+}
+setVolume(settings.volume);
+$('volRange').addEventListener('input', (e) => setVolume(Number(e.target.value)));
+$('volRange').addEventListener('wheel', (e) => {
+  e.preventDefault();
+  setVolume(Math.max(0, Math.min(100, settings.volume + (e.deltaY < 0 ? 5 : -5))));
+}, { passive: false });
+$('muteBtn').addEventListener('click', () => setVolume(settings.volume === 0 ? volBeforeMute : 0));
+
+// Thumbnail-only: a picture covers the video; the embed keeps playing underneath.
+function applyThumbOnly() {
+  $('npThumb').hidden = !settings.thumbOnly;
+  $('thumbOnly').checked = settings.thumbOnly;
+}
+applyThumbOnly();
+$('npThumb').addEventListener('click', () => togglePlay());
+$('thumbOnly').addEventListener('change', (e) => {
+  settings.thumbOnly = e.target.checked;
+  lsSet(LS.settings, settings);
+  applyThumbOnly();
+});
+
 // ---------------------------------------------------------------------------
 // Playing on with the screen off / in another app (phones)
 //
@@ -656,6 +688,7 @@ function playCurrent() {
   keepAwake(true);
   const v = byId.get(id);
   $('npTitle').textContent = v ? v.t : id;
+  $('npThumb').src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
   setNowPlayingMeta(v || { id });
   const cat = v && CAT_BY_ID[v.c];
   $('npMeta').textContent = v ? `${v.a || ''} · ${cat ? cat.name : ''} · ${'★'.repeat(v.s || 0)} · ${formatDuration(v.d)}` : '';

@@ -48,7 +48,7 @@ export class Player {
           height: '100%',
           playerVars: { autoplay: 1, rel: 0, playsinline: 1, modestbranding: 1 },
           events: {
-            onReady: () => { this.yt.playVideo(); resolve(); },
+            onReady: () => { this._applyVolume(); this.yt.playVideo(); resolve(); },
             onStateChange: (e) => this._state(e.data),
             onError: (e) => this.cb.onError && this.cb.onError(e.data),
           },
@@ -116,6 +116,18 @@ export class Player {
 
   isPlaying() {
     return !!(this.yt && this.yt.getPlayerState && this.yt.getPlayerState() === 1);
+  }
+
+  // 0-100; kept here so a rebuilt embed starts at the same level.
+  setVolume(v) {
+    this.vol = v;
+    this._applyVolume();
+  }
+
+  _applyVolume() {
+    if (this.vol == null || !this.yt || !this.yt.setVolume) return;
+    this.yt.setVolume(this.vol);
+    if (this.vol === 0) this.yt.mute(); else this.yt.unMute();
   }
 
   pause() { if (this.yt && this.yt.pauseVideo) this.yt.pauseVideo(); }

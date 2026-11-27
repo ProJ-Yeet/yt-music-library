@@ -7,8 +7,8 @@
   <meta name="description" content="A rated YouTube music library: filter by category, stars and flairs, then play or shuffle it right here.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e0457b'/%3E%3Cpath d='M26 14v26.5a8 8 0 1 0 5 7.4V24l17-4v15.5a8 8 0 1 0 5 7.4V8z' fill='white'/%3E%3C/svg%3E">
   <!-- Bump ?v= on every release so browsers never mix an old script with a new page. -->
-  <link rel="stylesheet" href="style.css?v=11">
-  <script type="module" src="js/app.js?v=11"></script>
+  <link rel="stylesheet" href="style.css?v=12">
+  <script type="module" src="js/app.js?v=12"></script>
 </head>
 <body>
   <header class="top">
@@ -105,7 +105,7 @@
   </div>
 
   <section id="dock" class="dock" hidden aria-label="Player">
-    <div class="dock-video"><div id="ytmount"></div></div>
+    <div class="dock-video"><div id="ytmount"></div><img id="npThumb" class="dock-thumb" alt="" hidden></div>
     <div class="dock-body">
       <div class="np">
         <div id="npTitle" class="np-title"></div>
@@ -116,6 +116,10 @@
         <button id="prevBtn" class="icon-btn" aria-label="Previous">⏮</button>
         <button id="ppBtn" class="icon-btn" aria-label="Play or pause">⏯</button>
         <button id="nextBtn" class="icon-btn" aria-label="Next">⏭</button>
+        <span class="vol">
+          <button id="muteBtn" class="icon-btn" aria-label="Mute">🔊</button>
+          <input id="volRange" type="range" min="0" max="100" step="1" aria-label="Volume">
+        </span>
         <span id="modeLabel" class="mode-label"></span>
         <button id="approveBtn" class="btn small" hidden>✅ Approve</button>
         <button id="queueBtn" class="btn ghost small">Queue</button>
@@ -134,6 +138,8 @@
       </label>
       <p class="muted">Each song's wait is stretched by up to 50% at random, so a batch you heard together comes back spread over several days. Listening history is kept in this browser only.</p>
       <p id="heardStats" class="muted"></p>
+      <label class="field-inline"><input id="thumbOnly" type="checkbox"> Show the thumbnail instead of the video</label>
+      <p class="muted">The sound still comes from YouTube's player underneath, so data use stays about the same.</p>
       <div class="dlg-row">
         <button id="clearHeard" type="button" class="btn ghost">Forget my listening history</button>
       </div>
