@@ -1,9 +1,9 @@
-import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=12';
+import { firebaseConfig, FIREBASE_SDK } from './firebase-config.js?v=13';
 import {
   CATEGORIES, CAT_BY_ID, FLAIRS, CHUNKS, chunkOf, chunkDocId, withAutoFlairs, normFlairs,
   bucketKey, bucketName, matches, shuffle, shuffleUnheard, filtersToHash, hashToFilters, formatDuration,
-} from './model.js?v=12';
-import { Player, UNPLAYABLE } from './player.js?v=12';
+} from './model.js?v=13';
+import { Player, UNPLAYABLE } from './player.js?v=13';
 
 const [{ initializeApp }, fs, au] = await Promise.all([
   import(`${FIREBASE_SDK}/firebase-app.js`),
@@ -756,6 +756,11 @@ $('shareBtn').addEventListener('click', async () => {
 let review = lsGet(LS.review, null); // { ids, i, listened: { id: { k, t } } }
 const saveReview = () => lsSet(LS.review, review);
 const apTicks = new Map(); // id → ticked in the Approve dialog
+// Tick / untick, kept in the saved run so it survives a reload.
+function setTick(id, on) {
+  apTicks.set(id, on);
+  if (review && review.listened[id]) review.listened[id].rated = on;
+}
 // Put songs back at the end of the run, to hear them again later.
 function requeueReview(ids) {
   for (const id of ids) { delete review.listened[id]; apTicks.delete(id); review.ids.push(id); }
@@ -853,7 +858,7 @@ function renderApprove() {
     const v = byId.get(id);
     const cat = CAT_BY_ID[v.c];
     const box = h('input', { type: 'checkbox', checked: apTicks.get(id) || null,
-      onchange: (e) => { apTicks.set(id, e.currentTarget.checked); if ($('apHideTicked').checked) renderApprove(); else countApprove(); } });
+      onchange: (e) => { setTick(id, e.currentTarget.checked); saveReview(); if ($('apHideTicked').checked) renderApprove(); else countApprove(); } });
     const on = apPreviewId === id;
     return h('li', { class: on ? 'previewing' : '' },
       box,
@@ -896,8 +901,8 @@ $('apPreviewStop').addEventListener('click', () => apPreview(null));
 $('approveDlg').addEventListener('close', () => { if (apPreviewId) apPreview(null); });
 $('approveBtn').addEventListener('click', () => { renderApprove(); $('approveDlg').showModal(); });
 $('apHideTicked').addEventListener('change', renderApprove);
-$('apAll').addEventListener('click', () => { for (const [id] of pendingApprovals()) apTicks.set(id, true); renderApprove(); });
-$('apNone').addEventListener('click', () => { for (const [id] of pendingApprovals()) apTicks.set(id, false); renderApprove(); });
+$('apAll').addEventListener('click', () => { for (const [id] of pendingApprovals()) setTick(id, true); saveReview(); renderApprove(); });
+$('apNone').addEventListener('click', () => { for (const [id] of pendingApprovals()) setTick(id, false); saveReview(); renderApprove(); });
 $('apBack').addEventListener('click', () => {
   const back = pendingApprovals().filter(([id]) => !apTicks.get(id)).map(([id]) => id);
   if (!back.length) { toast('Nothing unticked.'); return; }
